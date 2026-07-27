@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from "lucide-react";
 
 interface FormData {
   name: string;
@@ -26,6 +26,8 @@ export default function Contact() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -33,12 +35,47 @@ export default function Contact() {
     >
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would send the form data to your backend
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit booking");
+      }
+
+      const data = await response.json();
+      setSubmitted(true);
+      
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setForm({
+          name: "",
+          email: "",
+          phone: "",
+          checkIn: "",
+          checkOut: "",
+          room: "",
+          guests: "1",
+          message: "",
+        });
+        setSubmitted(false);
+      }, 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const inputClass =
@@ -143,6 +180,20 @@ export default function Contact() {
 
           {/* Booking form */}
           <div className="lg:col-span-3">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-[family-name:var(--font-lato)] text-red-800 text-sm">
+                    {error}
+                  </p>
+                  <p className="font-[family-name:var(--font-lato)] text-red-600 text-xs mt-1">
+                    Încearcă din nou sau sună-ne: +40 722 123 456
+                  </p>
+                </div>
+              </div>
+            )}
+            
             {submitted ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-16">
                 <CheckCircle size={56} className="text-[#8b6f47] mb-4" />
@@ -151,7 +202,10 @@ export default function Contact() {
                 </h3>
                 <p className="font-[family-name:var(--font-lato)] text-stone-500 max-w-sm leading-relaxed">
                   Mulțumim, {form.name.split(" ")[0]}! Vom confirma rezervarea
-                  în cel mai scurt timp pe email sau telefon.
+                  în cel mai scurt timp pe email sau WhatsApp.
+                </p>
+                <p className="font-[family-name:var(--font-lato)] text-stone-400 text-xs mt-4">
+                  Poți lăsa o recenzie după sejur: <a href="/review" className="text-[#8b6f47] underline">lasa review</a>
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
@@ -196,7 +250,7 @@ export default function Contact() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Telefon
+                      Telefon (pentru WhatsApp confirmare)
                     </label>
                     <input
                       type="tel"
@@ -289,10 +343,11 @@ export default function Contact() {
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 bg-[#8b6f47] text-white rounded-xl font-[family-name:var(--font-lato)] text-sm font-medium tracking-wide hover:bg-[#6b5234] transition-colors duration-300 flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-[#8b6f47] text-white rounded-xl font-[family-name:var(--font-lato)] text-sm font-medium tracking-wide hover:bg-[#6b5234] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Send size={16} />
-                  Trimite cererea de rezervare
+                  {loading ? "Se trimite..." : "Trimite cererea de rezervare"}
                 </button>
 
                 <p className="text-center font-[family-name:var(--font-lato)] text-stone-400 text-xs">

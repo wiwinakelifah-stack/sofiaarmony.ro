@@ -1,0 +1,105 @@
+{
+  "nav": {
+    "home": "Home",
+    "rooms": "Rooms",
+    "amenities": "Amenities",
+    "gallery": "Gallery",
+    "reviews": "Reviews",
+    "contact": "Contact",
+    "reserve": "Book now"
+  },
+  "hero": {
+    "subtitle": "Welcome to",
+    "title": "Sofia Armony",
+    "description": "An oasis of peace and elegance, where every moment becomes a precious memory. Discover authentic comfort in the heart of nature.",
+    "explore": "Explore rooms",
+    "rooms_count": "12+ Elegant rooms",
+    "guests_count": "500+ Happy guests",
+    "rating": "4.9★ Average rating"
+  },
+  "about": {
+    "title": "A home away from home",
+    "desc1": "Sofia Armony was born from a passion for authentic hospitality and the desire to offer our guests more than a simple place to sleep — a true relaxation experience.",
+    "desc2": "Located in the heart of nature, a few steps from ski slopes and mountain trails, we pride ourselves on authentic cuisine, tastefully decorated rooms and a dedicated team that will treat you like family.",
+    "sincerity": "Sincere hospitality",
+    "sincerity_desc": "Every guest is welcomed with the warmth of a friend.",
+    "quality": "Guaranteed quality",
+    "quality_desc": "High standards for cleanliness, comfort and personalized services.",
+    "eco": "Responsible tourism",
+    "eco_desc": "We use local products and ecological practices for a better future."
+  },
+  "rooms": {
+    "title": "Our rooms",
+    "desc": "Each room is designed with attention to offer the comfort and privacy you deserve.",
+    "classic": "Classic Room",
+    "classic_desc": "Simple elegance with solid wood furniture, comfortable queen-size bed and private bathroom. Perfect for couples or solo travelers.",
+    "deluxe": "Deluxe Room",
+    "deluxe_desc": "Spacious with separate living area, king-size bed, free-standing tub and private terrace with forest views.",
+    "suite": "Royal Suite",
+    "suite_desc": "Supreme experience: luxury bedroom and living room, private jacuzzi, fireplace and panoramic mountain views.",
+    "per_night": "per night",
+    "guests": "guests",
+    "size": "m²",
+    "reserve_this": "Book this room",
+    "popular": "Most popular",
+    "premium": "Premium"
+  },
+  "amenities": {
+    "title": "Facilities",
+    "desc": "Complete facilities: Wi-Fi, Spa, Restaurant, Parking, Jacuzzi, Garden and many others.",
+    "wifi": "Free Wi-Fi",
+    "wifi_desc": "High-speed internet throughout the property",
+    "parking": "Free Parking",
+    "parking_desc": "Secure and video-monitored parking",
+    "restaurant": "Restaurant & Bar",
+    "restaurant_desc": "Traditional Romanian and international cuisine",
+    "garden": "Garden & Terrace",
+    "garden_desc": "Outdoor relaxation areas with beautiful views",
+    "spa": "Jacuzzi & Spa",
+    "spa_desc": "Complete relaxation in our exclusive spa",
+    "breakfast": "Breakfast Included",
+    "breakfast_desc": "Buffet breakfast with fresh local products",
+    "fireplace": "Common Fireplace",
+    "fireplace_desc": "Relaxation room with fireplace for cold evenings",
+    "tour": "Local Guided Tour",
+    "tour_desc": "Discover local attractions with our guide",
+    "cta": "Book with 15% discount"
+  },
+  "gallery": {
+    "title": "Photo Gallery",
+    "desc": "A glimpse into our world — carefully designed spaces, unsurpassed nature and unforgettable moments."
+  },
+  "reviews": {
+    "title": "Guest Reviews",
+    "desc": "Our guests' stories are the best proof of the care we take to welcome them.",
+    "rating_avg": "out of 500+ reviews",
+    "leave_review": "Leave a review"
+  },
+  "contact": {
+    "title": "Contact & Booking",
+    "desc": "We are here to help you plan the perfect stay. Write us or call us anytime!",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "hours": "Check-in / Check-out",
+    "hours_value": "Check-in: 14:00 · Check-out: 12:00",
+    "full_name": "Full name",
+    "check_in": "Check-in date",
+    "check_out": "Check-out date",
+    "room_type": "Room type",
+    "guests": "Number of guests",
+    "special": "Special requests",
+    "submit": "Send booking request",
+    "confirmation": "Got it, {{name}}! We will confirm your booking within 2 hours by email or phone."
+  },
+  "footer": {
+    "brand": "Sofia Armony",
+    "tagline": "Guest House",
+    "desc": "A destination where peace and elegance meet. We await you to discover authentic Romanian comfort.",
+    "navigation": "Navigation",
+    "contact_info": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms and Conditions",
+    "copyright": "© {{year}} Sofia Armony Guest House. All rights reserved."
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "nav": {
+    "home": "Acasă",
+    "rooms": "Camere",
+    "amenities": "Facilități",
+    "gallery": "Galerie",
+    "reviews": "Recenzii",
+    "contact": "Contact",
+    "reserve": "Rezervă acum"
+  },
+  "hero": {
+    "subtitle": "Bun venit la",
+    "title": "Sofia Armony",
+    "description": "O oază de liniște și eleganță, unde fiecare moment devine o amintire prețioasă. Descoperă confortul autentic în inima naturii.",
+    "explore": "Explorează camerele",
+    "rooms_count": "12+ Camere elegante",
+    "guests_count": "500+ Oaspeți fericiți",
+    "rating": "4.9★ Evaluare medie"
+  },
+  "about": {
+    "title": "O casă departe de acasă",
+    "desc1": "Sofia Armony s-a născut dintr-o pasiune pentru ospitalitate autentică și dorința de a oferi oaspeților noștri mai mult decât un simplu loc de dormit — o adevărată experiență de relaxare.",
+    "desc2": "Situați în inima naturii, la câțiva pași de pârtiile de ski și traseele montane, ne mândrim cu o gastronomie autentică, camere decoratede cu gust și o echipă dedicată care te va trata ca acasă.",
+    "sincerity": "Ospitalitate sinceră",
+    "sincerity_desc": "Fiecare oaspete este primit cu căldura unui prieten de familie.",
+    "quality": "Calitate garantată",
+    "quality_desc": "Standarde înalte de curățenie, confort și servicii personalizate.",
+    "eco": "Turism responsabil",
+    "eco_desc": "Folosim produse locale și practici ecologice pentru un viitor mai bun."
+  },
+  "rooms": {
+    "title": "Camerele noastre",
+    "desc": "Fiecare cameră este gândită cu atenție pentru a oferi confortul și intimitatea pe care le meriți.",
+    "classic": "Camera Clasică",
+    "classic_desc": "Eleganță simplă cu mobilier din lemn masiv, pat confortabil queen-size și baie privată. Perfectă pentru cupluri sau călătorii solo.",
+    "deluxe": "Camera Deluxe",
+    "deluxe_desc": "Spațiu generos cu living separat, pat king-size, cadă free-standing și terasă privată cu priveliște spre pădure.",
+    "suite": "Suite Regală",
+    "suite_desc": "Experiența supremă: dormitor și living de lux, jacuzzi privat, șemineu și priveliște panoramică spre munți.",
+    "per_night": "lei / noapte",
+    "guests": "oaspeți",
+    "size": "m²",
+    "reserve_this": "Rezervă această cameră",
+    "popular": "Cel mai popular",
+    "premium": "Premium"
+  },
+  "amenities": {
+    "title": "Facilități & Servicii",
+    "desc": "Facilități complete: Wi-Fi, Spa, Restaurant, Parcare, Jacuzzi, Grădină și multe altele.",
+    "wifi": "Wi-Fi Gratuit",
+    "wifi_desc": "Conexiune de mare viteză în toată proprietatea",
+    "parking": "Parcare Gratuită",
+    "parking_desc": "Parcare securizată și supravegheată video",
+    "restaurant": "Restaurant & Bar",
+    "restaurant_desc": "Bucătărie tradițională românească și internațională",
+    "garden": "Grădină & Terasă",
+    "garden_desc": "Spații de relaxare în aer liber cu priveliști superbe",
+    "spa": "Jacuzzi & Spa",
+    "spa_desc": "Relaxare completă în spa-ul nostru exclusiv",
+    "breakfast": "Mic Dejun Inclus",
+    "breakfast_desc": "Mic dejun bufet cu produse locale proaspete",
+    "fireplace": "Șemineu Comun",
+    "fireplace_desc": "Sală de relaxare cu șemineu pentru serile reci",
+    "tour": "Tur Ghidat Local",
+    "tour_desc": "Descoperă obiectivele zonei cu ghidul nostru",
+    "cta": "Rezervă acum cu reducere 15%"
+  },
+  "gallery": {
+    "title": "Galerie Foto",
+    "desc": "O privire în lumea noastră — spații gândite cu grijă, natură neîntrecută și momente de neuitat."
+  },
+  "reviews": {
+    "title": "Recenzii",
+    "desc": "Poveștile oaspeților noștri sunt cea mai bună dovadă a grijii cu care îi primim.",
+    "rating_avg": "din 500+ recenzii",
+    "leave_review": "Lasă o recenzie"
+  },
+  "contact": {
+    "title": "Contact & Rezervare",
+    "desc": "Suntem aici să te ajutăm să planifici șederea perfectă. Scrie-ne sau sună-ne oricând!",
+    "phone": "Telefon",
+    "email": "Email",
+    "address": "Adresă",
+    "hours": "Check-in / Check-out",
+    "hours_value": "Check-in: 14:00 · Check-out: 12:00",
+    "full_name": "Nume complet",
+    "check_in": "Data sosirii",
+    "check_out": "Data plecării",
+    "room_type": "Tipul camerei dorite",
+    "guests": "Nr. oaspeți",
+    "special": "Mențiuni speciale",
+    "submit": "Trimite cererea de rezervare",
+    "confirmation": "Mulțumim, {{name}}! Vom confirma rezervarea în cel mai scurt timp pe email sau telefon."
+  },
+  "footer": {
+    "brand": "Sofia Armony",
+    "tagline": "Casa de Oaspeți",
+    "desc": "O destinație unde liniștea și eleganța se întâlnesc. Te așteptăm să descoperi confortul autentic românesc.",
+    "navigation": "Navigare",
+    "contact_info": "Contact",
+    "privacy": "Politica de confidențialitate",
+    "terms": "Termeni și condiții",
+    "copyright": "© {{year}} Sofia Armony Casa de Oaspeți. Toate drepturile rezervate."
+  }
+}
