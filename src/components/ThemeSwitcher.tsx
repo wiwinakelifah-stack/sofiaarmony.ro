@@ -17,13 +17,14 @@ export default function ThemeSwitcher() {
   return (
     <button
       onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-lg border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+      className="p-2.5 rounded-lg border-2 border-stone-300 dark:border-amber-500 hover:bg-stone-100 dark:hover:bg-stone-800 hover:border-[#8b6f47] dark:hover:border-amber-400 transition-all"
       aria-label="Toggle theme"
+      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       {theme === "dark" ? (
-        <Sun size={18} className="text-amber-500" />
+        <Sun size={20} className="text-amber-500" />
       ) : (
-        <Moon size={18} className="text-stone-700" />
+        <Moon size={20} className="text-blue-500" />
       )}
     </button>
   );

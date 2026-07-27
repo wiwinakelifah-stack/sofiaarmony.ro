@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Lato } from "next/font/google";
 import "./globals.css";
+import ThemeProvider from "@/components/ThemeProvider";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -41,8 +43,15 @@ export default async function LocaleLayout({
     <html
       lang={lang}
       className={`${playfair.variable} ${lato.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

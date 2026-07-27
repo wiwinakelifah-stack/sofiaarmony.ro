@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import Gallery from "@/components/Gallery";
 import Footer from "@/components/Footer";
 
@@ -10,7 +9,6 @@ export const metadata = {
 export default function GalleryPage() {
   return (
     <>
-      <Navbar />
       <main className="pt-16">
         <section className="py-16 bg-gradient-to-b from-stone-800 to-stone-900 text-white">
           <div className="max-w-4xl mx-auto px-6 text-center">

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import LanguageSwitcher from "./LanguageSwitcher";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 const navLinks = [
   { label: "Acasă", href: "/" },
@@ -66,6 +68,14 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          
+          {/* Spacer */}
+          <div className="w-px h-5 bg-stone-300 dark:bg-stone-600" />
+          
+          {/* Theme & Language Switchers */}
+          <ThemeSwitcher />
+          <LanguageSwitcher solid={solid} />
+          
           <Link
             href="/contact"
             className="ml-2 px-5 py-2 text-sm font-medium rounded-full bg-[#8b6f47] text-white hover:bg-[#6b5234] transition-colors duration-300 font-[family-name:var(--font-lato)]"
@@ -99,6 +109,19 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+          
+          {/* Divider */}
+          <div className="h-px bg-stone-200 my-2" />
+          
+          {/* Mobile Theme & Language Switchers */}
+          <div className="flex gap-4 items-center justify-between">
+            <span className="text-xs font-medium text-stone-500">Setări:</span>
+            <div className="flex gap-3">
+              <ThemeSwitcher />
+              <LanguageSwitcher solid={true} />
+            </div>
+          </div>
+          
           <Link
             href="/contact"
             onClick={() => setMenuOpen(false)}
