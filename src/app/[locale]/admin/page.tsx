@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Check, X } from "lucide-react";
+import { Settings, Save, Check, X, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface AdminSettings {
   adminWhatsApp: string;
@@ -26,18 +27,29 @@ export default function AdminPanel() {
 
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    // Load settings from localStorage
-    const saved = localStorage.getItem("adminSettings");
-    if (saved) {
-      try {
-        setSettings(JSON.parse(saved));
-      } catch (error) {
-        console.error("Failed to load settings:", error);
+    // Check if user is authenticated
+    const auth = sessionStorage.getItem("adminAuth");
+    if (!auth) {
+      router.push("/ro/admin/login");
+    } else {
+      setIsAuthenticated(true);
+      // Load settings from localStorage
+      const saved = localStorage.getItem("adminSettings");
+      if (saved) {
+        try {
+          setSettings(JSON.parse(saved));
+        } catch (error) {
+          console.error("Failed to load settings:", error);
+        }
       }
     }
-  }, []);
+    setCheckingAuth(false);
+  }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -70,14 +82,43 @@ export default function AdminPanel() {
     }
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminAuth");
+    router.push("/ro/admin/login");
+  };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-900 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8b6f47] mx-auto mb-4"></div>
+          <p className="text-stone-600 dark:text-stone-400">Se verifică acasul...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-900 pt-24">
       <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="flex items-center gap-3 mb-8">
-          <Settings size={32} className="text-[#8b6f47]" />
-          <h1 className="font-[family-name:var(--font-playfair)] text-4xl text-stone-800 dark:text-white">
-            Admin Panel
-          </h1>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Settings size={32} className="text-[#8b6f47]" />
+            <h1 className="font-[family-name:var(--font-playfair)] text-4xl text-stone-800 dark:text-white">
+              Admin Panel
+            </h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+          >
+            <LogOut size={18} />
+            Deconectare
+          </button>
         </div>
 
         <div className="bg-white dark:bg-stone-800 rounded-2xl p-8 shadow-sm">
