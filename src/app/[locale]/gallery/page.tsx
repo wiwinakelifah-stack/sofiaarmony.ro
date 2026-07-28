@@ -6,26 +6,35 @@ export const metadata = {
   description: "Explorează fotografie frumoase ale camerelor, restaurantului, grădinii și naturii din jurul casei noastre.",
 };
 
-export default function GalleryPage() {
+export default async function GalleryPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const lang = locale === "en" ? "en" : "ro";
+
   return (
     <>
       <main className="pt-16">
         <section className="py-16 bg-gradient-to-b from-stone-800 to-stone-900 text-white">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <p className="text-amber-300 tracking-[0.25em] uppercase text-xs font-[family-name:var(--font-lato)] mb-3">
-              Imagini
+              {lang === "en" ? "Images" : "Imagini"}
             </p>
             <h1 className="font-[family-name:var(--font-playfair)] text-5xl md:text-6xl mb-4">
-              Galerie Foto
+              {lang === "en" ? "Photo Gallery" : "Galerie Foto"}
             </h1>
             <p className="font-[family-name:var(--font-lato)] text-white/80 max-w-2xl mx-auto leading-relaxed">
-              O privire în lumea noastră — spații gândite cu grijă, natură neîntrecută și momente de neuitat.
+              {lang === "en"
+                ? "A glimpse into our world — carefully designed spaces, unsurpassed nature and unforgettable moments."
+                : "O privire în lumea noastră — spații gândite cu grijă, natură neîntrecută și momente de neuitat."}
             </p>
           </div>
         </section>
         <Gallery />
       </main>
-      <Footer />
+      <Footer locale={lang} />
     </>
   );
 }

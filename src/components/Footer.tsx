@@ -1,7 +1,34 @@
 import { Phone, Mail, MapPin, Share2, Heart, Camera } from "lucide-react";
+import Link from "next/link";
 
-export default function Footer() {
+type Locale = "ro" | "en";
+
+export default function Footer({ locale = "ro" }: { locale?: Locale }) {
   const year = new Date().getFullYear();
+  const isEn = locale === "en";
+  const withLocale = (href: string) => `/${locale}${href === "/" ? "" : href}`;
+
+  const text = {
+    brandTagline: isEn ? "Guest House" : "Casa de Oaspeți",
+    description: isEn
+      ? "A destination where peace and elegance meet. We are waiting for you to discover authentic Romanian comfort."
+      : "O destinație unde liniștea și eleganța se întâlnesc. Te așteptăm să descoperi confortul autentic românesc.",
+    navigation: isEn ? "Navigation" : "Navigare",
+    contact: "Contact",
+    privacy: isEn ? "Privacy Policy" : "Politica de confidențialitate",
+    terms: isEn ? "Terms and Conditions" : "Termeni și condiții",
+    copyright: isEn
+      ? `© ${year} Sofia Armony Guest House. All rights reserved.`
+      : `© ${year} Sofia Armony Casa de Oaspeți. Toate drepturile rezervate.`,
+    navLinks: [
+      { label: isEn ? "Home" : "Acasă", href: "/" },
+      { label: isEn ? "Rooms" : "Camere", href: "/rooms" },
+      { label: isEn ? "Amenities" : "Facilități", href: "/amenities" },
+      { label: isEn ? "Gallery" : "Galerie", href: "/gallery" },
+      { label: isEn ? "Reviews" : "Recenzii", href: "/reviews" },
+      { label: "Contact", href: "/contact" },
+    ],
+  };
 
   return (
     <footer className="bg-[#1c1917] text-white">
@@ -14,12 +41,11 @@ export default function Footer() {
                 Sofia Armony
               </h3>
               <p className="text-[#c9a96e] text-xs tracking-widest uppercase mt-0.5 font-[family-name:var(--font-lato)]">
-                Casa de Oaspeți
+                {text.brandTagline}
               </p>
             </div>
             <p className="font-[family-name:var(--font-lato)] text-stone-400 text-sm leading-relaxed max-w-xs mb-6">
-              O destinație unde liniștea și eleganța se întâlnesc. Te așteptăm
-              să descoperi confortul autentic românesc.
+              {text.description}
             </p>
             {/* Social */}
             <div className="flex gap-3">
@@ -43,24 +69,17 @@ export default function Footer() {
           {/* Links */}
           <div>
             <h4 className="font-[family-name:var(--font-playfair)] text-sm font-semibold mb-5 text-stone-200">
-              Navigare
+              {text.navigation}
             </h4>
             <ul className="space-y-3">
-              {[
-                ["Acasă", "#home"],
-                ["Camere", "#rooms"],
-                ["Facilități", "#amenities"],
-                ["Galerie", "#gallery"],
-                ["Recenzii", "#reviews"],
-                ["Contact", "#contact"],
-              ].map(([label, href]) => (
+              {text.navLinks.map(({ label, href }) => (
                 <li key={label}>
-                  <a
-                    href={href}
+                  <Link
+                    href={withLocale(href)}
                     className="font-[family-name:var(--font-lato)] text-stone-400 text-sm hover:text-[#c9a96e] transition-colors duration-200"
                   >
                     {label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -69,7 +88,7 @@ export default function Footer() {
           {/* Contact */}
           <div>
             <h4 className="font-[family-name:var(--font-playfair)] text-sm font-semibold mb-5 text-stone-200">
-              Contact
+              {text.contact}
             </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
@@ -105,10 +124,10 @@ export default function Footer() {
       <div className="border-t border-stone-800">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="font-[family-name:var(--font-lato)] text-stone-500 text-xs">
-            © {year} Sofia Armony Casa de Oaspeți. Toate drepturile rezervate.
+            {text.copyright}
           </p>
           <div className="flex gap-5">
-            {["Politica de confidențialitate", "Termeni și condiții"].map(
+            {[text.privacy, text.terms].map(
               (item) => (
                 <a
                   key={item}

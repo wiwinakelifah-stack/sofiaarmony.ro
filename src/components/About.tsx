@@ -1,6 +1,32 @@
 import { Heart, Award, Leaf } from "lucide-react";
 
-export default function About() {
+interface AboutProps {
+  title: string;
+  desc1: string;
+  desc2: string;
+  sincerity: string;
+  sincerityDesc: string;
+  quality: string;
+  qualityDesc: string;
+  eco: string;
+  ecoDesc: string;
+  yearsLabel: string;
+  storyLabel: string;
+}
+
+export default function About({
+  title,
+  desc1,
+  desc2,
+  sincerity,
+  sincerityDesc,
+  quality,
+  qualityDesc,
+  eco,
+  ecoDesc,
+  yearsLabel,
+  storyLabel,
+}: AboutProps) {
   return (
     <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-6">
@@ -32,7 +58,7 @@ export default function About() {
             <div className="absolute bottom-16 right-0 bg-[#8b6f47] rounded-2xl p-6 text-white shadow-lg">
               <p className="font-[family-name:var(--font-playfair)] text-4xl font-semibold">10+</p>
               <p className="font-[family-name:var(--font-lato)] text-white/80 text-xs mt-1 tracking-wide">
-                Ani de experiență
+                {yearsLabel}
               </p>
             </div>
           </div>
@@ -40,38 +66,34 @@ export default function About() {
           {/* Text */}
           <div>
             <p className="text-[#8b6f47] tracking-[0.25em] uppercase text-xs font-[family-name:var(--font-lato)] mb-3">
-              Povestea noastră
+              {storyLabel}
             </p>
             <h2 className="font-[family-name:var(--font-playfair)] text-4xl md:text-5xl text-stone-800 mb-6 leading-tight">
-              O casă departe de acasă
+              {title}
             </h2>
             <p className="font-[family-name:var(--font-lato)] text-stone-500 leading-relaxed mb-5">
-              Sofia Armony s-a născut dintr-o pasiune pentru ospitalitate
-              autentică și dorința de a oferi oaspeților noștri mai mult decât
-              un simplu loc de dormit — o adevărată experiență de relaxare.
+              {desc1}
             </p>
             <p className="font-[family-name:var(--font-lato)] text-stone-500 leading-relaxed mb-8">
-              Situați în inima naturii, la câțiva pași de pârtiile de ski și
-              traseele montane, ne mândrim cu o gastronomie autentică, camere
-              decoratede cu gust și o echipă dedicată care te va trata ca acasă.
+              {desc2}
             </p>
 
             <div className="space-y-4">
               {[
                 {
                   icon: Heart,
-                  title: "Ospitalitate sinceră",
-                  desc: "Fiecare oaspete este primit cu căldura unui prieten de familie.",
+                  title: sincerity,
+                  desc: sincerityDesc,
                 },
                 {
                   icon: Award,
-                  title: "Calitate garantată",
-                  desc: "Standarde înalte de curățenie, confort și servicii personalizate.",
+                  title: quality,
+                  desc: qualityDesc,
                 },
                 {
                   icon: Leaf,
-                  title: "Turism responsabil",
-                  desc: "Folosim produse locale și practici ecologice pentru un viitor mai bun.",
+                  title: eco,
+                  desc: ecoDesc,
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="flex items-start gap-4">
