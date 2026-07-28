@@ -1,0 +1,56 @@
+[
+  {
+    "id": "LOG-1785234237749-3XYEV",
+    "reservationId": "SA-1785234237736-XXS1K",
+    "channel": "system",
+    "kind": "system",
+    "recipient": "internal",
+    "payloadPreview": "Reservation saved: SA-1785234237736-XXS1K",
+    "status": "sent",
+    "responseTimeMs": 0,
+    "errorMessage": null,
+    "providerResponse": "reservation persisted",
+    "createdAt": "2026-07-28T10:23:57.749Z"
+  },
+  {
+    "id": "LOG-1785234238129-EY34N",
+    "reservationId": "SA-1785234237736-XXS1K",
+    "channel": "whatsapp",
+    "kind": "admin",
+    "recipient": "+40722123456",
+    "payloadPreview": "🏨 REZERVARE NOUA - SOFIA ARMONY\n\n👤 Nume:\nStefan-Andrei Calota\n\n📞 Telefon:\n+40770419404\n\n📧 Email:\n2000calotastefan@gmail.com\n\n🛏 Camera:\nsuite\n\n📅 Check-In:\n2026-07-16\n\n📅 Check-Out:\n2026-07-28\n\n👨 Adulti:\n1\n\n👶 Copii:\n0\n\n📝 Observatii:\ne de test\n\n🆔 ID Rezervare:\nSA-1785234237736-XXS1K\n\n🕒 Data rezervarii:\n28.07.2026, 12:23:57",
+    "status": "failed",
+    "responseTimeMs": 0,
+    "errorMessage": "Configuratia WhatsApp Cloud API este incompleta.",
+    "providerResponse": null,
+    "createdAt": "2026-07-28T10:23:58.129Z"
+  },
+  {
+    "id": "LOG-1785234238401-6YXC4",
+    "reservationId": "SA-1785234237736-XXS1K",
+    "channel": "email",
+    "kind": "admin",
+    "recipient": "admin@sofiaarmony.ro",
+    "subject": "Rezervare noua SA-1785234237736-XXS1K",
+    "payloadPreview": "\n    <div style=\"font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5\">\n      <h2 style=\"margin:0 0 16px;color:#8b6f47;\">Rezervare noua - SA-1785234237736-XXS1K</h2>\n      <p>A fost inregistrata o noua cerere de rezervare pe website.</p>\n      <table style=\"border-collapse:collapse;width:100%;max-width:680px;\">\n        <tbody>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Nume</td><td style=\"padding:6px 0;\">Stefan-Andrei Calota</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Telefon</td><td style=\"padding:6px 0;\">+40770419404</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Email</td><td style=\"padding:6px 0;\">2000calotastefan@gmail.com</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Camera</td><td style=\"padding:6px 0;\">suite</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Check-In</td><td style=\"padding:6px 0;\">2026-07-16</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Check-Out</td><td style=\"padding:6px 0;\">2026-07-28</td></tr>\n          <tr><td style=\"padding:6px 0;font-weight:bold;\">Adulti</td><td style=\"padding:6px 0;\">1</td></tr>\n          <tr><td s",
+    "status": "failed",
+    "responseTimeMs": 267,
+    "errorMessage": "Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials ffacd0b85a97d-47f85c6287csm58066902f8f.25 - gsmtp",
+    "providerResponse": null,
+    "createdAt": "2026-07-28T10:23:58.401Z"
+  },
+  {
+    "id": "LOG-1785234238560-Q8A51",
+    "reservationId": "SA-1785234237736-XXS1K",
+    "channel": "email",
+    "kind": "client",
+    "recipient": "2000calotastefan@gmail.com",
+    "subject": "Cererea dumneavoastra de rezervare a fost inregistrata",
+    "payloadPreview": "\n  <!doctype html>\n  <html>\n    <head>\n      <meta charSet=\"utf-8\" />\n      <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n      <title>Confirmare primire cerere rezervare</title>\n    </head>\n    <body style=\"margin:0;padding:0;background:#f5f2ec;font-family:Arial,Helvetica,sans-serif;color:#1f2937;\">\n      <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background:#f5f2ec;padding:24px 12px;\">\n        <tr>\n          <td align=\"center\">\n            <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width:680px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e7e2d7;\">\n              <tr>\n                <td style=\"background:linear-gradient(135deg,#8b6f47,#b79567);padding:28px 24px;text-align:center;color:#ffffff;\">\n                  <div style=\"font-size:28px;font-weight:700;letter-spacing:0.5px;\">Sofia Armony</div>\n                  <div style=\"margin-top:6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:0.9;\">Casa de Oaspeti</div>\n                </td>\n              </tr>\n\n              <tr>\n                <td style=\"padding:28px 24px 20px;\">\n         ",
+    "status": "failed",
+    "responseTimeMs": 149,
+    "errorMessage": "Invalid login: 535-5.7.8 Username and Password not accepted. For more information, go to\n535 5.7.8  https://support.google.com/mail/?p=BadCredentials 5b1f17b1804b1-4957f9ae5c3sm407353575e9.3 - gsmtp",
+    "providerResponse": null,
+    "createdAt": "2026-07-28T10:23:58.560Z"
+  }
+]

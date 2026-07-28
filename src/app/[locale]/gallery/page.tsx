@@ -1,5 +1,8 @@
 import Gallery from "@/components/Gallery";
 import Footer from "@/components/Footer";
+import { getPublicGallery } from "@/lib/content-db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Galerie Foto | Casa de Oaspeți Sofia Armony",
@@ -13,6 +16,7 @@ export default async function GalleryPage({
 }) {
   const { locale } = await params;
   const lang = locale === "en" ? "en" : "ro";
+  const images = await getPublicGallery(lang);
 
   return (
     <>
@@ -32,7 +36,7 @@ export default async function GalleryPage({
             </p>
           </div>
         </section>
-        <Gallery />
+        <Gallery locale={lang} images={images} />
       </main>
       <Footer locale={lang} />
     </>

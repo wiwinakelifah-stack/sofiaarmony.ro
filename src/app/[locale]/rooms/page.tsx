@@ -1,5 +1,8 @@
 import Rooms from "@/components/Rooms";
 import Footer from "@/components/Footer";
+import { getPublicRooms } from "@/lib/content-db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Camerele noastre | Casa de Oaspeți Sofia Armony",
@@ -13,6 +16,7 @@ export default async function RoomsPage({
 }) {
   const { locale } = await params;
   const lang = locale === "en" ? "en" : "ro";
+  const rooms = await getPublicRooms(lang);
 
   return (
     <>
@@ -32,7 +36,7 @@ export default async function RoomsPage({
             </p>
           </div>
         </section>
-        <Rooms />
+        <Rooms locale={lang} rooms={rooms} />
       </main>
       <Footer locale={lang} />
     </>

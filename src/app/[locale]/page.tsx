@@ -4,6 +4,9 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import enMessages from "@/i18n/messages/en.json";
 import roMessages from "@/i18n/messages/ro.json";
+import { getHomeStats } from "@/lib/content-db";
+
+export const dynamic = "force-dynamic";
 
 export default async function Home({
   params,
@@ -13,32 +16,36 @@ export default async function Home({
   const { locale } = await params;
   const lang = locale === "en" ? "en" : "ro";
   const messages = lang === "en" ? enMessages : roMessages;
-  const withLocale = (href: string) => `/${lang}${href === "/" ? "" : href}`;
+  const stats = await getHomeStats();
+
+  const roomsCountValue = `${stats.activeRooms}+`;
+  const guestsCountValue = `${stats.happyGuests}+`;
+  const ratingValue = `${(stats.averageRating || 0).toFixed(1)}★`;
   const offers =
     lang === "en"
       ? [
           {
             title: "Our rooms",
             desc: "Elegant and comfortable, with beautiful views",
-            href: withLocale("/rooms"),
+            href: "/rooms",
             icon: "🏨",
           },
           {
             title: "Amenities & Services",
             desc: "Spa, restaurant, free Wi-Fi and more",
-            href: withLocale("/amenities"),
+            href: "/amenities",
             icon: "✨",
           },
           {
             title: "Photo gallery",
             desc: "See the beauty of our place in pictures",
-            href: withLocale("/gallery"),
+            href: "/gallery",
             icon: "📸",
           },
           {
             title: "Reviews",
             desc: "Read what our happy guests are saying",
-            href: withLocale("/reviews"),
+            href: "/reviews",
             icon: "⭐",
           },
         ]
@@ -46,25 +53,25 @@ export default async function Home({
           {
             title: "Camerele noastre",
             desc: "Elegante și confortabile, cu priveliști deosebite",
-            href: withLocale("/rooms"),
+            href: "/rooms",
             icon: "🏨",
           },
           {
             title: "Facilități & Servicii",
             desc: "Spa, restaurant, Wi-Fi gratuit și nu numai",
-            href: withLocale("/amenities"),
+            href: "/amenities",
             icon: "✨",
           },
           {
             title: "Galerie Foto",
             desc: "Vezi frumusețea locului nostru în imagini",
-            href: withLocale("/gallery"),
+            href: "/gallery",
             icon: "📸",
           },
           {
             title: "Recenzii",
             desc: "Citește ce spun oaspeții noștri fericiți",
-            href: withLocale("/reviews"),
+            href: "/reviews",
             icon: "⭐",
           },
         ];
@@ -73,14 +80,16 @@ export default async function Home({
     <>
       <main>
         <Hero
-          locale={lang}
           subtitle={messages.hero.subtitle}
           description={messages.hero.description}
           explore={messages.hero.explore}
           reserve={messages.nav.reserve}
-          roomsCount={messages.hero.rooms_count}
-          guestsCount={messages.hero.guests_count}
-          rating={messages.hero.rating}
+          roomsCountLabel={lang === "en" ? "Elegant rooms" : "Camere elegante"}
+          guestsCountLabel={lang === "en" ? "Happy guests" : "Oaspeti fericiti"}
+          ratingLabel={lang === "en" ? "Average rating" : "Evaluare medie"}
+          roomsCountValue={roomsCountValue}
+          guestsCountValue={guestsCountValue}
+          ratingValue={ratingValue}
         />
         <About
           storyLabel={lang === "en" ? "Our story" : "Povestea noastră"}
@@ -129,7 +138,7 @@ export default async function Home({
 
             <div className="text-center mt-12">
               <Link
-                href={withLocale("/contact")}
+                href="/contact"
                 className="inline-block px-8 py-3.5 bg-[#8b6f47] text-white rounded-full font-[family-name:var(--font-lato)] text-sm font-medium tracking-wide hover:bg-[#6b5234] transition-colors duration-300"
               >
                 {messages.nav.reserve}

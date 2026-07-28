@@ -1,171 +1,242 @@
-import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-import { readAdminSettings } from '@/lib/admin-settings';
+import { NextRequest, NextResponse } from "next/server";
+import { readAdminSettings } from "@/lib/admin-settings";
+import { appendNotificationLog } from "@/lib/notification-logs";
+import {
+  sendEmailMessage,
+  sendWhatsAppMessage,
+} from "@/lib/notification-service";
+import {
+  CLIENT_CONFIRMATION_SUBJECT,
+  formatAdminEmailHtml,
+  formatAdminWhatsAppMessage,
+  formatClientEmailHtml,
+} from "@/lib/notification-templates";
+import {
+  createReservation,
+  updateReservationNotificationStatus,
+  type ReservationInput,
+} from "@/lib/reservations";
+
+interface IncomingBookingPayload {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  room?: string;
+  checkIn?: string;
+  checkOut?: string;
+  adults?: number | string;
+  children?: number | string;
+  guests?: number | string;
+  message?: string;
+}
+
+function parseNameParts(payload: IncomingBookingPayload) {
+  if (payload.firstName || payload.lastName) {
+    return {
+      firstName: (payload.firstName || "").trim(),
+      lastName: (payload.lastName || "").trim(),
+    };
+  }
+
+  const fullName = (payload.name || "").trim();
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return { firstName: "", lastName: "" };
+  }
+  if (parts.length === 1) {
+    return { firstName: parts[0], lastName: "" };
+  }
+
+  return {
+    firstName: parts[0],
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+function toNumber(value: unknown, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function validateReservationInput(input: ReservationInput) {
+  const errors: string[] = [];
+
+  if (!input.firstName) errors.push("Prenumele este obligatoriu.");
+  if (!input.lastName) errors.push("Numele este obligatoriu.");
+  if (!input.email) errors.push("Email-ul este obligatoriu.");
+  if (!input.phone) errors.push("Telefonul este obligatoriu.");
+  if (!input.checkIn) errors.push("Check-In este obligatoriu.");
+  if (!input.checkOut) errors.push("Check-Out este obligatoriu.");
+  if (input.adults < 1) errors.push("Trebuie cel putin un adult.");
+
+  return errors;
+}
+
+
+async function logNotificationResult(input: {
+  reservationId?: string;
+  channel: "whatsapp" | "email";
+  kind: "admin" | "client" | "test";
+  recipient: string;
+  subject?: string;
+  payloadPreview: string;
+  ok: boolean;
+  responseTimeMs: number;
+  errorMessage?: string;
+  providerResponse?: string;
+}) {
+  return appendNotificationLog({
+    reservationId: input.reservationId,
+    channel: input.channel,
+    kind: input.kind,
+    recipient: input.recipient,
+    subject: input.subject,
+    payloadPreview: input.payloadPreview.slice(0, 1200),
+    status: input.ok ? "sent" : "failed",
+    responseTimeMs: input.responseTimeMs,
+    errorMessage: input.errorMessage ?? null,
+    providerResponse: input.providerResponse ?? null,
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const adminSettings = await readAdminSettings();
-    const body = await request.json();
-    const { name, email, phone, checkIn, checkOut, room, guests, message } = body;
+    const payload = (await request.json()) as IncomingBookingPayload;
+    const names = parseNameParts(payload);
 
-    // Store booking in a simple JSON file (or database)
-    // For production, use a real database
-    const bookingData = {
-      id: Date.now().toString(),
-      name,
-      email,
-      phone,
-      checkIn,
-      checkOut,
-      room,
-      guests,
-      message,
-      createdAt: new Date().toISOString(),
-      status: 'pending'
+    const reservationInput: ReservationInput = {
+      firstName: names.firstName,
+      lastName: names.lastName,
+      email: (payload.email || "").trim(),
+      phone: (payload.phone || "").trim(),
+      room: (payload.room || "").trim(),
+      checkIn: (payload.checkIn || "").trim(),
+      checkOut: (payload.checkOut || "").trim(),
+      adults: toNumber(payload.adults ?? payload.guests, 1),
+      children: toNumber(payload.children, 0),
+      message: (payload.message || "").trim(),
     };
 
-    // Send WhatsApp to admin
-    if (
-      adminSettings.adminWhatsApp &&
-      adminSettings.whatsappCloudApiToken &&
-      adminSettings.whatsappCloudApiPhoneNumberId
-    ) {
-      await sendWhatsApp(
-        adminSettings.adminWhatsApp,
-        `📩 New Booking Request\nFrom: ${name}\nEmail: ${email}\nPhone: ${phone}\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`,
-        adminSettings
+    const validationErrors = validateReservationInput(reservationInput);
+    if (validationErrors.length) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validationErrors },
+        { status: 400 }
       );
     }
 
-    // Send WhatsApp to customer
-    if (phone && adminSettings.whatsappCloudApiToken && adminSettings.whatsappCloudApiPhoneNumberId) {
-      await sendWhatsApp(
-        phone,
-        `✅ Sofia Armony\n\nHi ${name}, we received your booking request. We'll confirm within 2 hours.\n\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`,
-        adminSettings
-      );
-    }
+    // 1) Reservation is always persisted first.
+    const reservation = await createReservation(reservationInput);
+    await appendNotificationLog({
+      reservationId: reservation.id,
+      channel: "system",
+      kind: "system",
+      recipient: "internal",
+      payloadPreview: `Reservation saved: ${reservation.id}`,
+      status: "sent",
+      responseTimeMs: 0,
+      providerResponse: "reservation persisted",
+    });
 
-    // Send email to admin
-    if (adminSettings.adminEmail) {
-      await sendEmail({
-        to: adminSettings.adminEmail,
-        subject: `New Booking Request from ${name}`,
-        html: `
-          <h2>New Booking Request</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Phone:</strong> ${phone}</p>
-          <p><strong>Check-in:</strong> ${checkIn}</p>
-          <p><strong>Check-out:</strong> ${checkOut}</p>
-          <p><strong>Room:</strong> ${room}</p>
-          <p><strong>Guests:</strong> ${guests}</p>
-          <p><strong>Message:</strong> ${message || 'N/A'}</p>
-        `
+    const settings = await readAdminSettings();
+
+    const results: Array<{ channel: "whatsapp" | "email"; ok: boolean; logId?: string }> = [];
+
+    // 2) WhatsApp notification to admin
+    const adminWhatsAppMessage = formatAdminWhatsAppMessage(reservation);
+    const waResult = await sendWhatsAppMessage(
+      settings,
+      settings.adminWhatsApp || "+40769277629",
+      adminWhatsAppMessage
+    );
+    const waLog = await logNotificationResult({
+      reservationId: reservation.id,
+      channel: "whatsapp",
+      kind: "admin",
+      recipient: settings.adminWhatsApp || "+40769277629",
+      payloadPreview: adminWhatsAppMessage,
+      ok: waResult.ok,
+      responseTimeMs: waResult.responseTimeMs,
+      errorMessage: waResult.errorMessage,
+      providerResponse: waResult.providerResponse,
+    });
+    results.push({ channel: "whatsapp", ok: waResult.ok, logId: waLog.id });
+
+    // Optional admin email to keep previous behavior
+    if (settings.adminEmail) {
+      const adminEmailSubject = `Rezervare noua ${reservation.id}`;
+      const adminEmailHtml = formatAdminEmailHtml(reservation);
+      const adminEmailResult = await sendEmailMessage(
+        settings,
+        settings.adminEmail,
+        adminEmailSubject,
+        adminEmailHtml
+      );
+
+      await logNotificationResult({
+        reservationId: reservation.id,
+        channel: "email",
+        kind: "admin",
+        recipient: settings.adminEmail,
+        subject: adminEmailSubject,
+        payloadPreview: adminEmailHtml,
+        ok: adminEmailResult.ok,
+        responseTimeMs: adminEmailResult.responseTimeMs,
+        errorMessage: adminEmailResult.errorMessage,
+        providerResponse: adminEmailResult.providerResponse,
       });
     }
 
-    // Send confirmation email to customer
-    await sendEmail({
-      to: email,
-      subject: 'Booking Confirmation - Sofia Armony',
-      html: `
-        <h2>Booking Request Received</h2>
-        <p>Hi ${name},</p>
-        <p>Thank you for your booking request. We will confirm your reservation within 2 hours.</p>
-        <h3>Booking Details:</h3>
-        <ul>
-          <li><strong>Check-in:</strong> ${checkIn}</li>
-          <li><strong>Check-out:</strong> ${checkOut}</li>
-          <li><strong>Room:</strong> ${room}</li>
-          <li><strong>Guests:</strong> ${guests}</li>
-        </ul>
-        <p>Best regards,<br>Sofia Armony Team</p>
-      `
+    // 3) Confirmation email to client
+    const clientEmailSubject = CLIENT_CONFIRMATION_SUBJECT;
+    const clientEmailHtml = formatClientEmailHtml(reservation);
+    const clientEmailResult = await sendEmailMessage(
+      settings,
+      reservation.email,
+      clientEmailSubject,
+      clientEmailHtml
+    );
+    const clientEmailLog = await logNotificationResult({
+      reservationId: reservation.id,
+      channel: "email",
+      kind: "client",
+      recipient: reservation.email,
+      subject: clientEmailSubject,
+      payloadPreview: clientEmailHtml,
+      ok: clientEmailResult.ok,
+      responseTimeMs: clientEmailResult.responseTimeMs,
+      errorMessage: clientEmailResult.errorMessage,
+      providerResponse: clientEmailResult.providerResponse,
     });
+    results.push({ channel: "email", ok: clientEmailResult.ok, logId: clientEmailLog.id });
+
+    const allOk = results.every((item) => item.ok);
+    const anyOk = results.some((item) => item.ok);
+    await updateReservationNotificationStatus(
+      reservation.id,
+      allOk ? "sent" : anyOk ? "partial" : "pending"
+    );
 
     return NextResponse.json({
       success: true,
-      message: 'Booking request submitted successfully',
-      bookingId: bookingData.id
+      reservationId: reservation.id,
+      reservationCreatedAt: reservation.createdAt,
+      notifications: {
+        whatsappAdmin: waResult.ok,
+        emailClient: clientEmailResult.ok,
+      },
+      warning:
+        allOk
+          ? null
+          : "Rezervarea a fost salvata, dar una sau mai multe notificari au esuat. Le poti retrimite din Admin > Notificari.",
     });
-
   } catch (error) {
-    console.error('Booking error:', error);
+    console.error("Booking error:", error);
     return NextResponse.json(
-      { error: 'Failed to process booking' },
+      { error: "A aparut o eroare la procesarea rezervarii." },
       { status: 500 }
     );
-  }
-}
-
-async function sendWhatsApp(to: string, message: string, adminSettings: { whatsappCloudApiToken: string; whatsappCloudApiPhoneNumberId: string; whatsappCloudApiVersion: string; }) {
-  try {
-    if (!adminSettings.whatsappCloudApiToken || !adminSettings.whatsappCloudApiPhoneNumberId) {
-      console.log('WhatsApp Cloud API not configured, skipping WhatsApp');
-      return;
-    }
-
-    const normalizedTo = normalizePhoneNumber(to);
-
-    if (!normalizedTo) {
-      console.log('Invalid WhatsApp recipient number, skipping message');
-      return;
-    }
-
-    const response = await fetch(
-      `https://graph.facebook.com/${adminSettings.whatsappCloudApiVersion}/${adminSettings.whatsappCloudApiPhoneNumberId}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${adminSettings.whatsappCloudApiToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          to: normalizedTo,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body: message,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`WhatsApp Cloud API request failed: ${response.status} ${errorBody}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('WhatsApp error:', error);
-  }
-}
-
-function normalizePhoneNumber(phoneNumber: string) {
-  return phoneNumber.replace(/\D/g, '');
-}
-
-async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {
-  try {
-    // Using Gmail or your SMTP provider
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    console.error('Email error:', error);
   }
 }

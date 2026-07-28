@@ -1,25 +1,22 @@
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
 import { locales } from "@/i18n/request";
 
-export default function LanguageSwitcher({ solid = false }: { solid?: boolean }) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const switchLanguage = (locale: string) => {
-    const segments = pathname.split("/").filter(Boolean);
-    const hasLocale = locales.includes(segments[0] as (typeof locales)[number]);
-    const nextPath = hasLocale
-      ? `/${[locale, ...segments.slice(1)].join("/")}`
-      : `/${[locale, ...segments].join("/")}`;
-    router.push(nextPath);
+export default function LanguageSwitcher({
+  solid = false,
+  currentLocale,
+}: {
+  solid?: boolean;
+  currentLocale: "ro" | "en";
+}) {
+  const switchLanguage = async (locale: string) => {
+    await fetch("/api/locale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale }),
+    });
+    window.location.reload();
   };
-
-  const currentSegment = pathname.split("/").filter(Boolean)[0];
-  const currentLocale = locales.includes(currentSegment as (typeof locales)[number])
-    ? currentSegment
-    : locales[0];
 
   return (
     <div className={`flex gap-1 border-2 rounded-lg p-1.5 transition-all ${
@@ -30,7 +27,7 @@ export default function LanguageSwitcher({ solid = false }: { solid?: boolean })
       {locales.map((locale) => (
         <button
           key={locale}
-          onClick={() => switchLanguage(locale)}
+          onClick={() => void switchLanguage(locale)}
           className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
             currentLocale === locale
               ? "bg-[#8b6f47] text-white shadow-md scale-105"

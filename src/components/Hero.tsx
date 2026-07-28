@@ -2,27 +2,31 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
 interface HeroProps {
-  locale: "ro" | "en";
   subtitle: string;
   description: string;
   explore: string;
   reserve: string;
-  roomsCount: string;
-  guestsCount: string;
-  rating: string;
+  roomsCountLabel: string;
+  guestsCountLabel: string;
+  ratingLabel: string;
+  roomsCountValue: string;
+  guestsCountValue: string;
+  ratingValue: string;
 }
 
 export default function Hero({
-  locale,
   subtitle,
   description,
   explore,
   reserve,
-  roomsCount,
-  guestsCount,
-  rating,
+  roomsCountLabel,
+  guestsCountLabel,
+  ratingLabel,
+  roomsCountValue,
+  guestsCountValue,
+  ratingValue,
 }: HeroProps) {
-  const withLocale = (href: string) => `/${locale}${href === "/" ? "" : href}`;
+  const withLocale = (href: string) => href;
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -69,9 +73,9 @@ export default function Hero({
       <div className="absolute bottom-0 left-0 right-0 bg-white/10 backdrop-blur-sm border-t border-white/20">
         <div className="max-w-4xl mx-auto px-6 py-5 grid grid-cols-3 divide-x divide-white/20">
           {[
-            { value: "12+", label: roomsCount },
-            { value: "500+", label: guestsCount },
-            { value: "4.9★", label: rating },
+            { value: roomsCountValue, label: roomsCountLabel },
+            { value: guestsCountValue, label: guestsCountLabel },
+            { value: ratingValue, label: ratingLabel },
           ].map((stat) => (
             <div key={stat.label} className="text-center px-4">
               <div className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-white">

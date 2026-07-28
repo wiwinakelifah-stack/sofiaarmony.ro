@@ -16,22 +16,23 @@ export default function AdminLogin() {
     setError("");
     setLoading(true);
 
-    // Hardcoded credentials
-    const validEmail = "admin@sofiaarmony.ro";
-    const validPassword = "nuimipasa";
+    try {
+      const response = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (email === validEmail && password === validPassword) {
-      // Store auth token in sessionStorage
-      sessionStorage.setItem("adminAuth", JSON.stringify({
-        email,
-        timestamp: Date.now(),
-        token: btoa(`${email}:${password}`)
-      }));
-      
-      // Redirect to admin panel
-      router.push("/ro/admin");
-    } else {
-      setError("Email sau parolă incorectă");
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Email sau parola incorecta");
+        setLoading(false);
+        return;
+      }
+
+      router.push("/admin");
+    } catch {
+      setError("Nu s-a putut efectua conectarea.");
       setLoading(false);
     }
   };
@@ -104,7 +105,7 @@ export default function AdminLogin() {
           {/* Info Box */}
           <div className="mt-6 p-3 bg-blue-900/30 border border-blue-600 rounded-lg">
             <p className="text-xs text-blue-200">
-              <strong>Demo:</strong> Folosește email și parolă stabilite de administrator.
+              <strong>Info:</strong> In dezvoltare, super adminul implicit este admin@sofiaarmony.ro.
             </p>
           </div>
         </div>

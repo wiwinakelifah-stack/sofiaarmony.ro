@@ -32,7 +32,7 @@ export default async function ContactPage({
             </p>
           </div>
         </section>
-        <Contact />
+        <Contact locale={lang} />
       </main>
       <Footer locale={lang} />
     </>

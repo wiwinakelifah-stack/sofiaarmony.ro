@@ -6,7 +6,6 @@ type Locale = "ro" | "en";
 export default function Footer({ locale = "ro" }: { locale?: Locale }) {
   const year = new Date().getFullYear();
   const isEn = locale === "en";
-  const withLocale = (href: string) => `/${locale}${href === "/" ? "" : href}`;
 
   const text = {
     brandTagline: isEn ? "Guest House" : "Casa de Oaspeți",
@@ -75,7 +74,7 @@ export default function Footer({ locale = "ro" }: { locale?: Locale }) {
               {text.navLinks.map(({ label, href }) => (
                 <li key={label}>
                   <Link
-                    href={withLocale(href)}
+                    href={href}
                     className="font-[family-name:var(--font-lato)] text-stone-400 text-sm hover:text-[#c9a96e] transition-colors duration-200"
                   >
                     {label}

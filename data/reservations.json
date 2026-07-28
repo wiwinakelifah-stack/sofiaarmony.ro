@@ -1,0 +1,18 @@
+[
+  {
+    "id": "SA-1785234237736-XXS1K",
+    "createdAt": "2026-07-28T10:23:57.737Z",
+    "status": "pending",
+    "notificationStatus": "pending",
+    "firstName": "Stefan-Andrei",
+    "lastName": "Calota",
+    "email": "2000calotastefan@gmail.com",
+    "phone": "+40770419404",
+    "room": "suite",
+    "checkIn": "2026-07-16",
+    "checkOut": "2026-07-28",
+    "adults": 1,
+    "children": 0,
+    "message": "e de test"
+  }
+]

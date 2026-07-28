@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
-import ThemeSwitcher from "./ThemeSwitcher";
-import { locales } from "@/i18n/request";
 
 const labels = {
   ro: {
@@ -33,22 +31,12 @@ const labels = {
   },
 } as const;
 
-export default function Navbar() {
+export default function Navbar({ locale }: { locale: "ro" | "en" }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
-  const maybeLocale = segments[0];
-  const locale = locales.includes(maybeLocale as (typeof locales)[number]) ? maybeLocale : "ro";
   const t = labels[locale as keyof typeof labels];
-
-  const pathWithoutLocale =
-    locale === maybeLocale
-      ? `/${segments.slice(1).join("/")}`
-      : pathname;
-  const normalizedPath = pathWithoutLocale === "/" ? "/" : pathWithoutLocale.replace(/\/+$/, "");
-  const isHome = normalizedPath === "/";
-  const withLocale = (href: string) => `/${locale}${href === "/" ? "" : href}`;
+  const isHome = pathname === "/";
 
   const navLinks = [
     { label: t.home, href: "/" },
@@ -75,7 +63,7 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href={withLocale("/")} className="flex flex-col leading-tight">
+        <Link href="/" className="flex flex-col leading-tight">
           <span
             className={`font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-wide transition-colors duration-300 ${
               solid ? "text-stone-800" : "text-white"
@@ -97,7 +85,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={withLocale(link.href)}
+              href={link.href}
               className={`text-sm tracking-wide font-[family-name:var(--font-lato)] transition-colors duration-300 hover:text-[#c9a96e] ${
                 solid ? "text-stone-700" : "text-white/90"
               }`}
@@ -106,15 +94,11 @@ export default function Navbar() {
             </Link>
           ))}
           
-          {/* Spacer */}
-          <div className="w-px h-5 bg-stone-300 dark:bg-stone-600" />
-          
           {/* Theme & Language Switchers */}
-          <ThemeSwitcher />
-          <LanguageSwitcher solid={solid} />
+          <LanguageSwitcher solid={solid} currentLocale={locale} />
           
           <Link
-            href={withLocale("/contact")}
+            href="/contact"
             className="ml-2 px-5 py-2 text-sm font-medium rounded-full bg-[#8b6f47] text-white hover:bg-[#6b5234] transition-colors duration-300 font-[family-name:var(--font-lato)]"
           >
             {t.reserve}
@@ -139,7 +123,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={withLocale(link.href)}
+              href={link.href}
               onClick={() => setMenuOpen(false)}
               className="text-stone-700 text-sm tracking-wide font-[family-name:var(--font-lato)] hover:text-[#8b6f47] transition-colors py-1"
             >
@@ -150,17 +134,14 @@ export default function Navbar() {
           {/* Divider */}
           <div className="h-px bg-stone-200 my-2" />
           
-          {/* Mobile Theme & Language Switchers */}
+          {/* Mobile Language Switcher */}
           <div className="flex gap-4 items-center justify-between">
             <span className="text-xs font-medium text-stone-500">{t.settings}</span>
-            <div className="flex gap-3">
-              <ThemeSwitcher />
-              <LanguageSwitcher solid={true} />
-            </div>
+            <LanguageSwitcher solid={true} currentLocale={locale} />
           </div>
           
           <Link
-            href={withLocale("/contact")}
+            href="/contact"
             onClick={() => setMenuOpen(false)}
             className="mt-2 px-5 py-2 text-sm font-medium rounded-full bg-[#8b6f47] text-white hover:bg-[#6b5234] transition-colors text-center font-[family-name:var(--font-lato)]"
           >

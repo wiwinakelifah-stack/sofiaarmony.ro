@@ -2,32 +2,42 @@
 
 import { useState } from "react";
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   checkIn: string;
   checkOut: string;
   room: string;
-  guests: string;
+  adults: string;
+  children: string;
   message: string;
 }
 
-export default function Contact() {
+export default function Contact({ locale = "ro" }: { locale?: "ro" | "en" }) {
+  const t = locale === "en"
+    ? { category: "Booking", title: "Booking & Contact", intro: "We are here to help you plan the perfect stay. Write us or call us anytime!", contactInfo: "Contact information", map: "View on map", review: "You can leave a review after your stay:", reviewLink: "leave review", newRequest: "Send a new request", firstName: "First name", lastName: "Last name", email: "Email", phone: "Phone (for WhatsApp confirmation)", adults: "Adults *", children: "Children", arrival: "Arrival date *", departure: "Departure date *", room: "Desired room type", special: "Special requests", submit: "Submit booking request", confirm: "You will be contacted within 2 hours for confirmation.", success: "Booking submitted!", thanks: "Thank you,", errorHelp: "Try again or call us:" }
+    : { category: "Rezervare", title: "Rezervă & Contact", intro: "Suntem aici să te ajutăm să planifici șederea perfectă. Scrie-ne sau sună-ne oricând!", contactInfo: "Informații de contact", map: "Vezi pe hartă", review: "Poți lăsa o recenzie după sejur:", reviewLink: "lasa review", newRequest: "Trimite o nouă cerere", firstName: "Prenume", lastName: "Nume", email: "Email", phone: "Telefon (pentru WhatsApp confirmare)", adults: "Adulți *", children: "Copii", arrival: "Data sosirii *", departure: "Data plecării *", room: "Tipul camerei dorite", special: "Mențiuni speciale", submit: "Trimite cererea de rezervare", confirm: "Vei fi contactat în maxim 2 ore pentru confirmare.", success: "Rezervare trimisă!", thanks: "Mulțumim,", errorHelp: "Încearcă din nou sau sună-ne:", }
+
   const [form, setForm] = useState<FormData>({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
     checkIn: "",
     checkOut: "",
     room: "",
-    guests: "1",
+    adults: "1",
+    children: "0",
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -36,6 +46,7 @@ export default function Contact() {
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setError(null);
+    setWarning(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,21 +66,27 @@ export default function Contact() {
       }
 
       const data = await response.json();
+      if (data?.warning) {
+        setWarning(data.warning);
+      }
       setSubmitted(true);
       
       // Reset form after 3 seconds
       setTimeout(() => {
         setForm({
-          name: "",
+          firstName: "",
+          lastName: "",
           email: "",
           phone: "",
           checkIn: "",
           checkOut: "",
           room: "",
-          guests: "1",
+          adults: "1",
+          children: "0",
           message: "",
         });
         setSubmitted(false);
+        setWarning(null);
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -87,14 +104,13 @@ export default function Contact() {
         {/* Header */}
         <div className="text-center mb-16">
           <p className="text-[#8b6f47] tracking-[0.25em] uppercase text-xs font-[family-name:var(--font-lato)] mb-3">
-            Rezervare
+            {t.category}
           </p>
           <h2 className="font-[family-name:var(--font-playfair)] text-4xl md:text-5xl text-stone-800 mb-4">
-            Rezervă & Contact
+            {t.title}
           </h2>
           <p className="font-[family-name:var(--font-lato)] text-stone-500 max-w-xl mx-auto leading-relaxed">
-            Suntem aici să te ajutăm să planifici șederea perfectă. Scrie-ne sau
-            sună-ne oricând!
+            {t.intro}
           </p>
           <div className="mt-6 w-16 h-0.5 bg-[#c9a96e] mx-auto" />
         </div>
@@ -104,7 +120,7 @@ export default function Contact() {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-[#f5f0e8] rounded-2xl p-7">
               <h3 className="font-[family-name:var(--font-playfair)] text-xl text-stone-800 mb-6">
-                Informații de contact
+                {t.contactInfo}
               </h3>
               <div className="space-y-5">
                 {[
@@ -172,7 +188,7 @@ export default function Contact() {
                   className="bg-white/90 backdrop-blur-sm text-stone-700 text-sm px-5 py-2.5 rounded-full font-[family-name:var(--font-lato)] font-medium hover:bg-white transition-colors shadow-sm"
                 >
                   <MapPin size={14} className="inline mr-1.5" />
-                  Vezi pe hartă
+                  {t.map}
                 </a>
               </div>
             </div>
@@ -188,7 +204,7 @@ export default function Contact() {
                     {error}
                   </p>
                   <p className="font-[family-name:var(--font-lato)] text-red-600 text-xs mt-1">
-                    Încearcă din nou sau sună-ne: +40 722 123 456
+                    {t.errorHelp} +40 722 123 456
                   </p>
                 </div>
               </div>
@@ -198,20 +214,24 @@ export default function Contact() {
               <div className="flex flex-col items-center justify-center h-full text-center py-16">
                 <CheckCircle size={56} className="text-[#8b6f47] mb-4" />
                 <h3 className="font-[family-name:var(--font-playfair)] text-2xl text-stone-800 mb-3">
-                  Rezervare trimisă!
+                  {t.success}
                 </h3>
                 <p className="font-[family-name:var(--font-lato)] text-stone-500 max-w-sm leading-relaxed">
-                  Mulțumim, {form.name.split(" ")[0]}! Vom confirma rezervarea
-                  în cel mai scurt timp pe email sau WhatsApp.
+                  {t.thanks} {form.firstName}! {t.confirm}
                 </p>
+                {warning && (
+                  <p className="font-[family-name:var(--font-lato)] text-amber-700 text-xs mt-3 max-w-sm">
+                    {warning}
+                  </p>
+                )}
                 <p className="font-[family-name:var(--font-lato)] text-stone-400 text-xs mt-4">
-                  Poți lăsa o recenzie după sejur: <a href="/review" className="text-[#8b6f47] underline">lasa review</a>
+                  {t.review} <Link href="/review" className="text-[#8b6f47] underline">{t.reviewLink}</Link>
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
                   className="mt-6 text-[#8b6f47] text-sm font-[family-name:var(--font-lato)] underline underline-offset-2 hover:text-[#6b5234]"
                 >
-                  Trimite o nouă cerere
+                  {t.newRequest}
                 </button>
               </div>
             ) : (
@@ -219,21 +239,38 @@ export default function Contact() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Nume complet *
+                      {t.firstName} *
                     </label>
                     <input
                       type="text"
-                      name="name"
+                      name="firstName"
                       required
-                      placeholder="Ion Popescu"
-                      value={form.name}
+                      placeholder="Ion"
+                      value={form.firstName}
                       onChange={handleChange}
                       className={inputClass}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Email *
+                      {t.lastName} *
+                    </label>
+                    <input
+                      type="text"
+                      name="lastName"
+                      required
+                      placeholder="Popescu"
+                      value={form.lastName}
+                      onChange={handleChange}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
+                      {t.email} *
                     </label>
                     <input
                       type="email"
@@ -247,10 +284,10 @@ export default function Contact() {
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Telefon (pentru WhatsApp confirmare)
+                      {t.phone}
                     </label>
                     <input
                       type="tel"
@@ -263,18 +300,35 @@ export default function Contact() {
                   </div>
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Nr. oaspeți *
+                      {t.adults}
                     </label>
                     <select
-                      name="guests"
+                      name="adults"
                       required
-                      value={form.guests}
+                      value={form.adults}
                       onChange={handleChange}
                       className={inputClass}
                     >
                       {[1, 2, 3, 4].map((n) => (
                         <option key={n} value={n}>
-                          {n} {n === 1 ? "persoană" : "persoane"}
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
+                      {t.children}
+                    </label>
+                    <select
+                      name="children"
+                      value={form.children}
+                      onChange={handleChange}
+                      className={inputClass}
+                    >
+                      {[0, 1, 2, 3, 4].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
                         </option>
                       ))}
                     </select>
@@ -284,7 +338,7 @@ export default function Contact() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Data sosirii *
+                      {t.arrival}
                     </label>
                     <input
                       type="date"
@@ -297,7 +351,7 @@ export default function Contact() {
                   </div>
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      Data plecării *
+                      {t.departure}
                     </label>
                     <input
                       type="date"
@@ -312,7 +366,7 @@ export default function Contact() {
 
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                    Tipul camerei dorite
+                    {t.room}
                   </label>
                   <select
                     name="room"
@@ -320,21 +374,21 @@ export default function Contact() {
                     onChange={handleChange}
                     className={inputClass}
                   >
-                    <option value="">Orice cameră disponibilă</option>
-                    <option value="classic">Camera Clasică – 180 lei/noapte</option>
-                    <option value="deluxe">Camera Deluxe – 280 lei/noapte</option>
-                    <option value="suite">Suite Regală – 420 lei/noapte</option>
+                    <option value="">{locale === "en" ? "Any available room" : "Orice cameră disponibilă"}</option>
+                    <option value="classic">{locale === "en" ? "Classic Room – 180 lei/night" : "Camera Clasică – 180 lei/noapte"}</option>
+                    <option value="deluxe">{locale === "en" ? "Deluxe Room – 280 lei/night" : "Camera Deluxe – 280 lei/noapte"}</option>
+                    <option value="suite">{locale === "en" ? "Royal Suite – 420 lei/night" : "Suite Regală – 420 lei/noapte"}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                    Mențiuni speciale
+                    {t.special}
                   </label>
                   <textarea
                     name="message"
                     rows={4}
-                    placeholder="Cereri speciale, alergii, ocazii speciale..."
+                    placeholder={locale === "en" ? "Special requests, allergies, celebrations..." : "Cereri speciale, alergii, ocazii speciale..."}
                     value={form.message}
                     onChange={handleChange}
                     className={`${inputClass} resize-none`}
@@ -347,11 +401,11 @@ export default function Contact() {
                   className="w-full py-3.5 bg-[#8b6f47] text-white rounded-xl font-[family-name:var(--font-lato)] text-sm font-medium tracking-wide hover:bg-[#6b5234] transition-colors duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   <Send size={16} />
-                  {loading ? "Se trimite..." : "Trimite cererea de rezervare"}
+                  {loading ? (locale === "en" ? "Sending..." : "Se trimite...") : t.submit}
                 </button>
 
                 <p className="text-center font-[family-name:var(--font-lato)] text-stone-400 text-xs">
-                  Vei fi contactat în maxim 2 ore pentru confirmare.
+                  {t.confirm}
                 </p>
               </form>
             )}

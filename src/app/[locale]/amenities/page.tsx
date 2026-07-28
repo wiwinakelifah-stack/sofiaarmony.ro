@@ -32,7 +32,7 @@ export default async function AmenitiesPage({
             </p>
           </div>
         </section>
-        <Amenities />
+        <Amenities locale={lang} />
       </main>
       <Footer locale={lang} />
     </>

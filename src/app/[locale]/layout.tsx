@@ -47,7 +47,7 @@ export default async function LocaleLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <LayoutWrapper>
+          <LayoutWrapper locale={lang}>
             {children}
           </LayoutWrapper>
         </ThemeProvider>

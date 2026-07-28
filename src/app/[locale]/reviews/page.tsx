@@ -1,5 +1,8 @@
 import Reviews from "@/components/Reviews";
 import Footer from "@/components/Footer";
+import { getPublicReviews } from "@/lib/content-db";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Recenzii | Casa de Oaspeți Sofia Armony",
@@ -13,6 +16,7 @@ export default async function ReviewsPage({
 }) {
   const { locale } = await params;
   const lang = locale === "en" ? "en" : "ro";
+  const reviews = await getPublicReviews();
 
   return (
     <>
@@ -32,7 +36,7 @@ export default async function ReviewsPage({
             </p>
           </div>
         </section>
-        <Reviews />
+        <Reviews locale={lang} reviews={reviews} />
       </main>
       <Footer locale={lang} />
     </>

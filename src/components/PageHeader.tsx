@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
@@ -24,9 +26,9 @@ export default function PageHeader({
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-12">
         {/* Breadcrumb */}
         <p className="font-[family-name:var(--font-lato)] text-white/60 text-xs tracking-widest uppercase mb-3">
-          <a href="/" className="hover:text-white/90 transition-colors">
+          <Link href="/" className="hover:text-white/90 transition-colors">
             Acasă
-          </a>
+          </Link>
           <span className="mx-2">›</span>
           {breadcrumb}
         </p>
