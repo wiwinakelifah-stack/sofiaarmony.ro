@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-
-// For now, we'll use environment variables for Twilio credentials
-// You'll need to set these in .env.local
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_PHONE = process.env.TWILIO_PHONE;
-const ADMIN_WHATSAPP = process.env.ADMIN_WHATSAPP;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+import { readAdminSettings } from '@/lib/admin-settings';
 
 export async function POST(request: NextRequest) {
   try {
+    const adminSettings = await readAdminSettings();
     const body = await request.json();
     const { name, email, phone, checkIn, checkOut, room, guests, message } = body;
 
@@ -31,25 +25,31 @@ export async function POST(request: NextRequest) {
     };
 
     // Send WhatsApp to admin
-    if (ADMIN_WHATSAPP && TWILIO_ACCOUNT_SID) {
+    if (
+      adminSettings.adminWhatsApp &&
+      adminSettings.whatsappCloudApiToken &&
+      adminSettings.whatsappCloudApiPhoneNumberId
+    ) {
       await sendWhatsApp(
-        ADMIN_WHATSAPP,
-        `📩 New Booking Request\nFrom: ${name}\nEmail: ${email}\nPhone: ${phone}\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`
+        adminSettings.adminWhatsApp,
+        `📩 New Booking Request\nFrom: ${name}\nEmail: ${email}\nPhone: ${phone}\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`,
+        adminSettings
       );
     }
 
-    // Send WhatsApp/SMS to customer
-    if (phone && TWILIO_ACCOUNT_SID) {
+    // Send WhatsApp to customer
+    if (phone && adminSettings.whatsappCloudApiToken && adminSettings.whatsappCloudApiPhoneNumberId) {
       await sendWhatsApp(
         phone,
-        `✅ Sofia Armony\n\nHi ${name}, we received your booking request. We'll confirm within 2 hours.\n\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`
+        `✅ Sofia Armony\n\nHi ${name}, we received your booking request. We'll confirm within 2 hours.\n\nCheck-in: ${checkIn}\nGuests: ${guests}\nRoom: ${room}`,
+        adminSettings
       );
     }
 
     // Send email to admin
-    if (ADMIN_EMAIL) {
+    if (adminSettings.adminEmail) {
       await sendEmail({
-        to: ADMIN_EMAIL,
+        to: adminSettings.adminEmail,
         subject: `New Booking Request from ${name}`,
         html: `
           <h2>New Booking Request</h2>
@@ -99,33 +99,53 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function sendWhatsApp(to: string, message: string) {
+async function sendWhatsApp(to: string, message: string, adminSettings: { whatsappCloudApiToken: string; whatsappCloudApiPhoneNumberId: string; whatsappCloudApiVersion: string; }) {
   try {
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE) {
-      console.log('Twilio not configured, skipping WhatsApp');
+    if (!adminSettings.whatsappCloudApiToken || !adminSettings.whatsappCloudApiPhoneNumberId) {
+      console.log('WhatsApp Cloud API not configured, skipping WhatsApp');
+      return;
+    }
+
+    const normalizedTo = normalizePhoneNumber(to);
+
+    if (!normalizedTo) {
+      console.log('Invalid WhatsApp recipient number, skipping message');
       return;
     }
 
     const response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+      `https://graph.facebook.com/${adminSettings.whatsappCloudApiVersion}/${adminSettings.whatsappCloudApiPhoneNumberId}/messages`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64')}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Bearer ${adminSettings.whatsappCloudApiToken}`,
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          From: `whatsapp:${TWILIO_PHONE}`,
-          To: `whatsapp:${to}`,
-          Body: message,
-        }).toString(),
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedTo,
+          type: 'text',
+          text: {
+            preview_url: false,
+            body: message,
+          },
+        }),
       }
     );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`WhatsApp Cloud API request failed: ${response.status} ${errorBody}`);
+    }
 
     return await response.json();
   } catch (error) {
     console.error('WhatsApp error:', error);
   }
+}
+
+function normalizePhoneNumber(phoneNumber: string) {
+  return phoneNumber.replace(/\D/g, '');
 }
 
 async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }) {

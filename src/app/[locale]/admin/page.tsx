@@ -1,18 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Check, X, LogOut } from "lucide-react";
+import { Settings, Save, Check, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
-
-interface AdminSettings {
-  adminWhatsApp: string;
-  adminEmail: string;
-  emailUser: string;
-  emailPassword: string;
-  twilioAccountSid: string;
-  twilioAuthToken: string;
-  twilioPhone: string;
-}
+import type { AdminSettings } from "@/lib/admin-settings";
 
 export default function AdminPanel() {
   const [settings, setSettings] = useState<AdminSettings>({
@@ -20,9 +11,9 @@ export default function AdminPanel() {
     adminEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL || "",
     emailUser: "",
     emailPassword: "",
-    twilioAccountSid: "",
-    twilioAuthToken: "",
-    twilioPhone: "",
+    whatsappCloudApiToken: "",
+    whatsappCloudApiPhoneNumberId: "",
+    whatsappCloudApiVersion: "v20.0",
   });
 
   const [saved, setSaved] = useState(false);
@@ -32,23 +23,29 @@ export default function AdminPanel() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const auth = sessionStorage.getItem("adminAuth");
-    if (!auth) {
-      router.push("/ro/admin/login");
-    } else {
-      setIsAuthenticated(true);
-      // Load settings from localStorage
-      const saved = localStorage.getItem("adminSettings");
-      if (saved) {
-        try {
-          setSettings(JSON.parse(saved));
-        } catch (error) {
-          console.error("Failed to load settings:", error);
-        }
+    const loadSettings = async () => {
+      const auth = sessionStorage.getItem("adminAuth");
+      if (!auth) {
+        router.push("/ro/admin/login");
+        return;
       }
-    }
-    setCheckingAuth(false);
+
+      setIsAuthenticated(true);
+
+      try {
+        const response = await fetch("/api/admin/settings");
+        const data = await response.json();
+        if (data.settings) {
+          setSettings(data.settings);
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    void loadSettings();
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,15 +60,17 @@ export default function AdminPanel() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Save to localStorage
-      localStorage.setItem("adminSettings", JSON.stringify(settings));
+      const response = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      });
 
-      // In production, you'd send this to a secure backend API
-      // await fetch('/api/admin/settings', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(settings)
-      // });
+      if (!response.ok) {
+        throw new Error("Failed to save settings");
+      }
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -166,50 +165,50 @@ export default function AdminPanel() {
             <hr className="border-stone-200 dark:border-stone-700" />
 
             <h3 className="font-[family-name:var(--font-playfair)] text-lg text-stone-800 dark:text-white">
-              Twilio Configuration (For WhatsApp/SMS)
+              WhatsApp Cloud API Configuration
             </h3>
 
-            {/* Twilio Account SID */}
+            {/* WhatsApp Cloud API Token */}
             <div>
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-2">
-                Twilio Account SID
+                WhatsApp Cloud API Access Token
               </label>
               <input
                 type="password"
-                name="twilioAccountSid"
-                value={settings.twilioAccountSid}
+                name="whatsappCloudApiToken"
+                value={settings.whatsappCloudApiToken}
                 onChange={handleChange}
-                placeholder="Your Twilio Account SID"
+                placeholder="Your WhatsApp Cloud API token"
                 className="w-full border border-stone-200 dark:border-stone-700 rounded-lg px-4 py-2.5 bg-white dark:bg-stone-700 text-stone-800 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#8b6f47]/30"
               />
             </div>
 
-            {/* Twilio Auth Token */}
+            {/* WhatsApp Phone Number ID */}
             <div>
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-2">
-                Twilio Auth Token
+                WhatsApp Phone Number ID
               </label>
               <input
                 type="password"
-                name="twilioAuthToken"
-                value={settings.twilioAuthToken}
+                name="whatsappCloudApiPhoneNumberId"
+                value={settings.whatsappCloudApiPhoneNumberId}
                 onChange={handleChange}
-                placeholder="Your Twilio Auth Token"
+                placeholder="Your WhatsApp phone number ID"
                 className="w-full border border-stone-200 dark:border-stone-700 rounded-lg px-4 py-2.5 bg-white dark:bg-stone-700 text-stone-800 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#8b6f47]/30"
               />
             </div>
 
-            {/* Twilio Phone */}
+            {/* API Version */}
             <div>
               <label className="block text-sm font-medium text-stone-700 dark:text-stone-200 mb-2">
-                Twilio WhatsApp Sender Number
+                WhatsApp Cloud API Version
               </label>
               <input
                 type="text"
-                name="twilioPhone"
-                value={settings.twilioPhone}
+                name="whatsappCloudApiVersion"
+                value={settings.whatsappCloudApiVersion}
                 onChange={handleChange}
-                placeholder="+14155552368"
+                placeholder="v20.0"
                 className="w-full border border-stone-200 dark:border-stone-700 rounded-lg px-4 py-2.5 bg-white dark:bg-stone-700 text-stone-800 dark:text-white placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#8b6f47]/30"
               />
             </div>
@@ -277,7 +276,7 @@ export default function AdminPanel() {
           <div className="mt-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
             <p className="text-sm text-amber-800 dark:text-amber-200">
               <strong>⚠️ Important:</strong> These settings are stored in browser localStorage for now.
-              For production, add them to your .env.local file or secure backend.
+              For production, add the WhatsApp Cloud API values to your .env.local file or a secure backend.
             </p>
           </div>
         </div>

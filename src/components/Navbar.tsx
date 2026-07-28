@@ -6,21 +6,58 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { locales } from "@/i18n/request";
 
-const navLinks = [
-  { label: "Acasă", href: "/" },
-  { label: "Camere", href: "/rooms" },
-  { label: "Facilități", href: "/amenities" },
-  { label: "Galerie", href: "/gallery" },
-  { label: "Recenzii", href: "/reviews" },
-  { label: "Contact", href: "/contact" },
-];
+const labels = {
+  ro: {
+    home: "Acasă",
+    rooms: "Camere",
+    amenities: "Facilități",
+    gallery: "Galerie",
+    reviews: "Recenzii",
+    contact: "Contact",
+    reserve: "Rezervă acum",
+    settings: "Setări:",
+    guestHouse: "Casa de Oaspeți",
+  },
+  en: {
+    home: "Home",
+    rooms: "Rooms",
+    amenities: "Amenities",
+    gallery: "Gallery",
+    reviews: "Reviews",
+    contact: "Contact",
+    reserve: "Book now",
+    settings: "Settings:",
+    guestHouse: "Guest House",
+  },
+} as const;
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-  const isHome = pathname === "/";
+  const segments = pathname.split("/").filter(Boolean);
+  const maybeLocale = segments[0];
+  const locale = locales.includes(maybeLocale as (typeof locales)[number]) ? maybeLocale : "ro";
+  const t = labels[locale as keyof typeof labels];
+
+  const pathWithoutLocale =
+    locale === maybeLocale
+      ? `/${segments.slice(1).join("/")}`
+      : pathname;
+  const normalizedPath = pathWithoutLocale === "/" ? "/" : pathWithoutLocale.replace(/\/+$/, "");
+  const isHome = normalizedPath === "/";
+  const withLocale = (href: string) => `/${locale}${href === "/" ? "" : href}`;
+
+  const navLinks = [
+    { label: t.home, href: "/" },
+    { label: t.rooms, href: "/rooms" },
+    { label: t.amenities, href: "/amenities" },
+    { label: t.gallery, href: "/gallery" },
+    { label: t.reviews, href: "/reviews" },
+    { label: t.contact, href: "/contact" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -38,7 +75,7 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex flex-col leading-tight">
+        <Link href={withLocale("/")} className="flex flex-col leading-tight">
           <span
             className={`font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-wide transition-colors duration-300 ${
               solid ? "text-stone-800" : "text-white"
@@ -51,7 +88,7 @@ export default function Navbar() {
               solid ? "text-[#8b6f47]" : "text-amber-200"
             }`}
           >
-            Casa de Oaspeți
+            {t.guestHouse}
           </span>
         </Link>
 
@@ -60,7 +97,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={withLocale(link.href)}
               className={`text-sm tracking-wide font-[family-name:var(--font-lato)] transition-colors duration-300 hover:text-[#c9a96e] ${
                 solid ? "text-stone-700" : "text-white/90"
               }`}
@@ -77,10 +114,10 @@ export default function Navbar() {
           <LanguageSwitcher solid={solid} />
           
           <Link
-            href="/contact"
+            href={withLocale("/contact")}
             className="ml-2 px-5 py-2 text-sm font-medium rounded-full bg-[#8b6f47] text-white hover:bg-[#6b5234] transition-colors duration-300 font-[family-name:var(--font-lato)]"
           >
-            Rezervă acum
+            {t.reserve}
           </Link>
         </nav>
 
@@ -102,7 +139,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={withLocale(link.href)}
               onClick={() => setMenuOpen(false)}
               className="text-stone-700 text-sm tracking-wide font-[family-name:var(--font-lato)] hover:text-[#8b6f47] transition-colors py-1"
             >
@@ -115,7 +152,7 @@ export default function Navbar() {
           
           {/* Mobile Theme & Language Switchers */}
           <div className="flex gap-4 items-center justify-between">
-            <span className="text-xs font-medium text-stone-500">Setări:</span>
+            <span className="text-xs font-medium text-stone-500">{t.settings}</span>
             <div className="flex gap-3">
               <ThemeSwitcher />
               <LanguageSwitcher solid={true} />
@@ -123,11 +160,11 @@ export default function Navbar() {
           </div>
           
           <Link
-            href="/contact"
+            href={withLocale("/contact")}
             onClick={() => setMenuOpen(false)}
             className="mt-2 px-5 py-2 text-sm font-medium rounded-full bg-[#8b6f47] text-white hover:bg-[#6b5234] transition-colors text-center font-[family-name:var(--font-lato)]"
           >
-            Rezervă acum
+            {t.reserve}
           </Link>
         </div>
       )}

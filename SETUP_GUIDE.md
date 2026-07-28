@@ -32,10 +32,10 @@ Visit `http://localhost:3000`
 Create a `.env.local` file in the root:
 
 ```bash
-# WhatsApp/SMS (Twilio)
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE=whatsapp:+14155552368  # Your Twilio WhatsApp number
+# WhatsApp Cloud API
+WHATSAPP_CLOUD_API_TOKEN=your_whatsapp_cloud_api_token
+WHATSAPP_CLOUD_API_PHONE_NUMBER_ID=your_phone_number_id
+WHATSAPP_CLOUD_API_VERSION=v20.0
 
 # Admin Notifications
 ADMIN_WHATSAPP=+40722123456  # Your personal WhatsApp number
@@ -48,12 +48,12 @@ EMAIL_PASSWORD=your_gmail_app_password  # NOT your regular password!
 
 ### Getting Credentials:
 
-#### **Twilio Setup** (for WhatsApp/SMS)
-1. Go to https://www.twilio.com/
-2. Sign up for a free account
-3. Get your Account SID and Auth Token from Dashboard
-4. Set up WhatsApp Sandbox or buy a WhatsApp Business number
-5. Get your Twilio phone number
+#### **WhatsApp Cloud API Setup**
+1. Go to https://developers.facebook.com/
+2. Create or select your Meta app
+3. Add the WhatsApp product and connect your business account
+4. Get the permanent access token and phone number ID
+5. Add the number you want to notify to your approved recipients
 
 #### **Gmail Setup** (for emails)
 1. Enable 2-Step Verification on your Google account
@@ -71,7 +71,7 @@ When a user submits a booking request:
 1. ✅ A confirmation email is sent to the customer
 2. 📩 WhatsApp message sent to admin (`ADMIN_WHATSAPP`)
 3. 📨 Email notification sent to admin (`ADMIN_EMAIL`)
-4. 📱 SMS/WhatsApp sent to customer's phone with booking details
+4. 📱 WhatsApp sent to customer's phone with booking details
 
 **API Endpoint:** `POST /api/bookings`
 
@@ -121,7 +121,7 @@ When a user submits a booking request:
 **Features:**
 - Set WhatsApp number for booking notifications
 - Set admin email
-- Configure Twilio credentials
+- Configure WhatsApp Cloud API credentials
 - Set email credentials
 
 **Note:** Settings are stored in browser localStorage (for now). For production:
@@ -271,9 +271,9 @@ pm2 restart sofiaarmony
 ## 🛠️ Troubleshooting
 
 ### Bookings not sending WhatsApp?
-- Check `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` in `.env.local`
+- Check `WHATSAPP_CLOUD_API_TOKEN` and `WHATSAPP_CLOUD_API_PHONE_NUMBER_ID` in `.env.local`
 - Verify the phone numbers include country code: `+40...` or `+1...`
-- Ensure your Twilio account has WhatsApp Sandbox enabled
+- Ensure the recipient number is approved for WhatsApp Cloud API messaging
 
 ### Emails not sending?
 - Enable "Less secure app access" or use App Password (Gmail)

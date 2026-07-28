@@ -8,12 +8,18 @@ export default function LanguageSwitcher({ solid = false }: { solid?: boolean })
   const pathname = usePathname();
 
   const switchLanguage = (locale: string) => {
-    const segments = pathname.split("/");
-    segments[1] = locale;
-    router.push(segments.join("/"));
+    const segments = pathname.split("/").filter(Boolean);
+    const hasLocale = locales.includes(segments[0] as (typeof locales)[number]);
+    const nextPath = hasLocale
+      ? `/${[locale, ...segments.slice(1)].join("/")}`
+      : `/${[locale, ...segments].join("/")}`;
+    router.push(nextPath);
   };
 
-  const currentLocale = pathname.split("/")[1];
+  const currentSegment = pathname.split("/").filter(Boolean)[0];
+  const currentLocale = locales.includes(currentSegment as (typeof locales)[number])
+    ? currentSegment
+    : locales[0];
 
   return (
     <div className={`flex gap-1 border-2 rounded-lg p-1.5 transition-all ${

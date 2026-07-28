@@ -12,7 +12,7 @@ When a guest submits a booking request:
 
 ✅ **Customer receives:**
 - Confirmation email with booking details
-- WhatsApp/SMS message with confirmation
+- WhatsApp message with confirmation
 
 ✅ **Admin receives:**
 - Email notification with full booking details
@@ -49,7 +49,7 @@ New page at: **https://sofiaarmony.ro/admin**
 **Configure:**
 - WhatsApp number for notifications
 - Admin email address
-- Twilio credentials (WhatsApp/SMS provider)
+- WhatsApp Cloud API credentials
 - Gmail credentials (for sending emails)
 
 ⚠️ **Note:** Settings currently stored in browser. For production, add to `.env.local` or backend database.
@@ -74,13 +74,13 @@ Language switcher component created. To enable:
 
 ## ⚙️ Configuration Required
 
-### **Step 1: Get Twilio Account** (for WhatsApp/SMS)
+### **Step 1: Get WhatsApp Cloud API Access**
 
-1. Go to https://www.twilio.com/
-2. Sign up (free trial includes $15 credit)
-3. Get your **Account SID** and **Auth Token**
-4. Set up WhatsApp (sandbox or business number)
-5. Get your Twilio WhatsApp number
+1. Go to https://developers.facebook.com/
+2. Create or select your Meta app
+3. Add the WhatsApp product and connect your business account
+4. Generate a permanent access token
+5. Copy the WhatsApp phone number ID
 
 ### **Step 2: Get Gmail App Password** (for emails)
 
@@ -94,9 +94,9 @@ Language switcher component created. To enable:
 Edit `/var/www/sofiaarmony.ro/.env.local`:
 
 ```env
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxx
-TWILIO_PHONE=+14155552368
+WHATSAPP_CLOUD_API_TOKEN=xxxxxxxxxxxxxxxx
+WHATSAPP_CLOUD_API_PHONE_NUMBER_ID=xxxxxxxxxxxxxxxx
+WHATSAPP_CLOUD_API_VERSION=v20.0
 
 ADMIN_WHATSAPP=+40722123456
 ADMIN_EMAIL=admin@sofiaarmony.ro
@@ -218,14 +218,14 @@ GET /api/reviews
 - [ ] Integrate theme switcher in navbar
 - [ ] Integrate language switcher in navbar
 - [ ] Add booking management dashboard (view, confirm, cancel)
-- [ ] SMS confirmation via Twilio (already supported in backend)
+- [ ] Optional SMS fallback via a separate provider, if needed
 
 ---
 
 ## 📞 Troubleshooting
 
 **Bookings not sending WhatsApp?**
-- Check `.env.local` has correct Twilio credentials
+- Check `.env.local` has `WHATSAPP_CLOUD_API_TOKEN` and `WHATSAPP_CLOUD_API_PHONE_NUMBER_ID`
 - Verify phone numbers start with `+` and country code
 
 **Emails not sending?**
