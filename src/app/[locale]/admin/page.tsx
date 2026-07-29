@@ -33,6 +33,7 @@ type AdminUser = {
 type MenuKey =
   | "dashboard"
   | "profile"
+  | "settings"
   | "rooms"
   | "room-images"
   | "gallery"
@@ -82,6 +83,8 @@ type RoomRecord = {
   badge_en: string | null;
   is_active: number;
   available_units: number;
+  occupied_units?: number;
+  available_units_for_period?: number;
   sort_order: number;
 };
 
@@ -112,10 +115,14 @@ type ReservationRecord = {
   first_name: string;
   last_name: string;
   email: string;
+  phone: string;
   room: string;
+  room_slug?: string;
   room_name: string;
   room_price_per_night: number | null;
   guest_count: number;
+  adults?: number;
+  children?: number;
   check_in: string;
   check_out: string;
   status: "pending" | "confirmed" | "cancelled" | "completed";
@@ -124,10 +131,13 @@ type ReservationRecord = {
 
 type ReviewRecord = {
   id: number;
+  reservation_id?: string | null;
   user_name: string;
+  user_email?: string | null;
   rating: number;
   comment: string;
   status: "pending" | "approved" | "rejected";
+  created_at?: string;
 };
 
 type UserRecord = {
@@ -148,6 +158,7 @@ type InviteCodeRecord = {
 const menus: Array<{ key: MenuKey; label: string; icon: typeof ChartColumn }> = [
   { key: "dashboard", label: "Dashboard", icon: ChartColumn },
   { key: "profile", label: "Profil", icon: User },
+  { key: "settings", label: "Setari", icon: Mail },
   { key: "rooms", label: "Camere", icon: Camera },
   { key: "room-images", label: "Imagini camere", icon: FileImage },
   { key: "gallery", label: "Galerie", icon: ImagePlus },
@@ -248,10 +259,58 @@ export default function AdminPage() {
     isActive: true,
   });
 
+  const [reservationForm, setReservationForm] = useState({
+    id: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    roomSlug: "",
+    checkIn: "",
+    checkOut: "",
+    adults: 1,
+    children: 0,
+    message: "",
+    status: "pending" as ReservationRecord["status"],
+    open: false,
+  });
+
+  const [reviewForm, setReviewForm] = useState({
+    id: 0,
+    userName: "",
+    rating: 5,
+    comment: "",
+    status: "pending" as ReviewRecord["status"],
+    open: false,
+  });
+
+  const [settingsForm, setSettingsForm] = useState({
+    smtpHost: "",
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: "",
+    smtpPassword: "",
+    smtpFromEmail: "",
+    smtpFromName: "Sofia Armony",
+    adminEmail: "",
+  });
+  const [smtpStatus, setSmtpStatus] = useState<string>("");
+  const [testEmailTo, setTestEmailTo] = useState<string>("");
+
+  const [roomPeriod, setRoomPeriod] = useState(() => {
+    const today = new Date();
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    return {
+      checkIn: today.toISOString().slice(0, 10),
+      checkOut: tomorrow.toISOString().slice(0, 10),
+    };
+  });
+
   const [deleteTarget, setDeleteTarget] = useState<
     | { kind: "room"; id: number; label: string }
     | { kind: "gallery"; id: number; label: string }
     | { kind: "room-image"; id: number; label: string }
+    | { kind: "review"; id: number; label: string }
     | null
   >(null);
 
@@ -278,8 +337,37 @@ export default function AdminPage() {
     setProfileForm((prev) => ({ ...prev, email: data.profile.email }));
   }, []);
 
+  const loadSettings = useCallback(async () => {
+    const data = await fetchJson<{
+      settings: {
+        smtpHost: string;
+        smtpPort: number;
+        smtpSecure: boolean;
+        smtpUser: string;
+        smtpPassword: string;
+        smtpFromEmail: string;
+        smtpFromName: string;
+        adminEmail: string;
+      };
+    }>("/api/admin/settings");
+    setSettingsForm({
+      smtpHost: data.settings.smtpHost || "",
+      smtpPort: Number(data.settings.smtpPort || 587),
+      smtpSecure: Boolean(data.settings.smtpSecure),
+      smtpUser: data.settings.smtpUser || "",
+      smtpPassword: data.settings.smtpPassword || "",
+      smtpFromEmail: data.settings.smtpFromEmail || "",
+      smtpFromName: data.settings.smtpFromName || "Sofia Armony",
+      adminEmail: data.settings.adminEmail || "",
+    });
+  }, []);
+
   const loadRooms = useCallback(async () => {
-    const data = await fetchJson<{ rooms: RoomRecord[] }>("/api/admin/rooms");
+    const query = new URLSearchParams({
+      checkIn: roomPeriod.checkIn,
+      checkOut: roomPeriod.checkOut,
+    });
+    const data = await fetchJson<{ rooms: RoomRecord[] }>(`/api/admin/rooms?${query.toString()}`);
     setRooms(data.rooms);
 
     if (data.rooms.length > 0) {
@@ -287,7 +375,7 @@ export default function AdminPage() {
     }
 
     return data.rooms;
-  }, []);
+  }, [roomPeriod.checkIn, roomPeriod.checkOut]);
 
   const loadGallery = useCallback(async () => {
     const data = await fetchJson<{ images: GalleryRecord[] }>("/api/admin/gallery");
@@ -344,6 +432,7 @@ export default function AdminPage() {
       try {
         if (active === "dashboard") await loadDashboard();
         if (active === "profile") await loadProfile();
+        if (active === "settings") await loadSettings();
         if (active === "rooms") await loadRooms();
         if (active === "gallery") await loadGallery();
         if (active === "room-images") {
@@ -354,6 +443,7 @@ export default function AdminPage() {
           }
         }
         if (active === "reservations") await loadReservations();
+        if (active === "reservations") await loadRooms();
         if (active === "reviews") await loadReviews();
         if (active === "users") await loadUsers();
         if (active === "invite-codes") await loadInviteCodes();
@@ -368,6 +458,7 @@ export default function AdminPage() {
     loadingAuth,
     loadDashboard,
     loadProfile,
+    loadSettings,
     loadRooms,
     loadGallery,
     loadRoomImages,
@@ -413,6 +504,73 @@ export default function AdminPage() {
       setUser((prev) => (prev ? { ...prev, email: data.profile.email } : prev));
       setProfileForm((prev) => ({ ...prev, currentPassword: "", newPassword: "", confirmNewPassword: "" }));
       setMessage(data.message || "Profil actualizat.");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveEmailSettings = async () => {
+    clearNotice();
+    setBusy(true);
+    setSmtpStatus("");
+    try {
+      await fetchJson<{ success: boolean }>("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settingsForm),
+      });
+      setMessage("Setarile SMTP au fost salvate.");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const testSmtpConnection = async () => {
+    clearNotice();
+    setBusy(true);
+    try {
+      const data = await fetchJson<{ status: { smtpConnectionOk: boolean; smtpConnectionMessage: string } }>(
+        "/api/admin/notifications/overview"
+      );
+      setSmtpStatus(data.status.smtpConnectionMessage);
+      if (data.status.smtpConnectionOk) {
+        setMessage("Conexiunea SMTP este functionala.");
+      } else {
+        setError(data.status.smtpConnectionMessage || "Conexiunea SMTP a esuat.");
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendTestEmailFromSettings = async () => {
+    if (!testEmailTo.trim()) {
+      setError("Introdu adresa de email pentru test.");
+      return;
+    }
+
+    clearNotice();
+    setBusy(true);
+    try {
+      const response = await fetchJson<{ success: boolean; message: string; error?: string }>(
+        "/api/admin/notifications/test-email",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: testEmailTo.trim() }),
+        }
+      );
+      if (response.success) {
+        setMessage(response.message || "Email de test trimis.");
+      } else {
+        setError(response.error || response.message || "Trimiterea emailului de test a esuat.");
+      }
     } catch (err) {
       handleError(err);
     } finally {
@@ -528,6 +686,50 @@ export default function AdminPage() {
     setDeleteTarget({ kind: "room-image", id, label: item ? item.title || `imagine #${id}` : `imagine #${id}` });
   };
 
+  const editReview = (review: ReviewRecord) => {
+    setReviewForm({
+      id: Number(review.id),
+      userName: review.user_name,
+      rating: Number(review.rating),
+      comment: review.comment,
+      status: review.status,
+      open: true,
+    });
+  };
+
+  const deleteReview = (id: number) => {
+    const review = reviews.find((entry) => entry.id === id);
+    setDeleteTarget({ kind: "review", id, label: review ? review.user_name : `review #${id}` });
+  };
+
+  const submitReviewEdit = async () => {
+    if (!reviewForm.id) return;
+
+    clearNotice();
+    setBusy(true);
+
+    try {
+      await fetchJson("/api/admin/reviews", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: reviewForm.id,
+          userName: reviewForm.userName,
+          rating: Number(reviewForm.rating),
+          comment: reviewForm.comment,
+          status: reviewForm.status,
+        }),
+      });
+      setReviewForm({ id: 0, userName: "", rating: 5, comment: "", status: "pending", open: false });
+      await loadReviews();
+      setMessage("Review actualizat.");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const confirmDeleteTarget = async () => {
     if (!deleteTarget) return;
 
@@ -553,6 +755,12 @@ export default function AdminPage() {
           await loadRoomImages(selectedRoomId);
         }
         setMessage("Imagine stearsa.");
+      }
+
+      if (deleteTarget.kind === "review") {
+        await fetchJson(`/api/admin/reviews?id=${deleteTarget.id}`, { method: "DELETE" });
+        await loadReviews();
+        setMessage("Review sters.");
       }
       setDeleteTarget(null);
     } catch (err) {
@@ -606,6 +814,11 @@ export default function AdminPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onGalleryDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    await uploadGallery(event.dataTransfer.files);
   };
 
   const openGalleryForEdit = (item: GalleryRecord) => {
@@ -752,6 +965,79 @@ export default function AdminPage() {
       setMessage("Status rezervare actualizat.");
     } catch (err) {
       handleError(err);
+    }
+  };
+
+  const openReservationEdit = (reservation: ReservationRecord) => {
+    setReservationForm({
+      id: reservation.id,
+      firstName: reservation.first_name,
+      lastName: reservation.last_name,
+      email: reservation.email || "",
+      phone: reservation.phone || "",
+      roomSlug: reservation.room_slug || rooms.find((room) => room.name_ro === (reservation.room_name || reservation.room))?.slug || "",
+      checkIn: reservation.check_in,
+      checkOut: reservation.check_out,
+      adults: Math.max(1, Number(reservation.guest_count || 1) - Number(reservation.children || 0)),
+      children: Number(reservation.children || 0),
+      message: "",
+      status: reservation.status,
+      open: true,
+    });
+  };
+
+  const submitReservationEdit = async () => {
+    if (!reservationForm.id) return;
+    if (!reservationForm.roomSlug) {
+      setError("Selecteaza tipul de camera.");
+      return;
+    }
+
+    clearNotice();
+    setBusy(true);
+
+    try {
+      await fetchJson("/api/admin/reservations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: reservationForm.id,
+          firstName: reservationForm.firstName,
+          lastName: reservationForm.lastName,
+          email: reservationForm.email,
+          phone: reservationForm.phone,
+          roomSlug: reservationForm.roomSlug,
+          checkIn: reservationForm.checkIn,
+          checkOut: reservationForm.checkOut,
+          adults: Number(reservationForm.adults),
+          children: Number(reservationForm.children),
+          message: reservationForm.message,
+          status: reservationForm.status,
+        }),
+      });
+
+      setReservationForm({
+        id: "",
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        roomSlug: "",
+        checkIn: "",
+        checkOut: "",
+        adults: 1,
+        children: 0,
+        message: "",
+        status: "pending",
+        open: false,
+      });
+      await loadReservations();
+      await loadRooms();
+      setMessage("Rezervarea a fost actualizata.");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -1052,9 +1338,143 @@ export default function AdminPage() {
               </section>
             )}
 
+            {active === "settings" && (
+              <section className="space-y-5">
+                <h2 className="text-xl font-semibold">Setari Email (SMTP)</h2>
+
+                <div className="rounded-xl bg-slate-800 border border-slate-700 p-4 md:p-5 space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <input
+                      value={settingsForm.smtpHost}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpHost: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Server SMTP"
+                    />
+                    <input
+                      type="number"
+                      value={settingsForm.smtpPort}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpPort: Number(e.target.value) }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Port"
+                    />
+                    <select
+                      value={settingsForm.smtpSecure ? "ssl" : "tls"}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpSecure: e.target.value === "ssl" }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="tls">TLS / STARTTLS</option>
+                      <option value="ssl">SSL</option>
+                    </select>
+                    <input
+                      value={settingsForm.smtpUser}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpUser: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Utilizator SMTP"
+                    />
+                    <input
+                      type="password"
+                      value={settingsForm.smtpPassword}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpPassword: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Parola SMTP"
+                    />
+                    <input
+                      value={settingsForm.smtpFromEmail}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpFromEmail: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Email expeditor"
+                    />
+                    <input
+                      value={settingsForm.smtpFromName}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, smtpFromName: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Nume expeditor"
+                    />
+                    <input
+                      value={settingsForm.adminEmail}
+                      onChange={(e) => setSettingsForm((prev) => ({ ...prev, adminEmail: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Email admin notificari"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => void saveEmailSettings()}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium disabled:opacity-60"
+                    >
+                      Salveaza setarile SMTP
+                    </button>
+                    <button
+                      onClick={() => void testSmtpConnection()}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 text-sm font-medium disabled:opacity-60"
+                    >
+                      Testeaza conexiunea SMTP
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto] items-center">
+                    <input
+                      value={testEmailTo}
+                      onChange={(e) => setTestEmailTo(e.target.value)}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Trimite email de test catre"
+                    />
+                    <button
+                      onClick={() => void sendTestEmailFromSettings()}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-medium disabled:opacity-60"
+                    >
+                      Trimite email de test
+                    </button>
+                  </div>
+
+                  {smtpStatus && (
+                    <p className="text-xs text-slate-300">Status SMTP: {smtpStatus}</p>
+                  )}
+                </div>
+              </section>
+            )}
+
             {active === "rooms" && (
               <section className="space-y-5">
                 <h2 className="text-xl font-semibold">Camere</h2>
+
+                <div className="rounded-xl bg-slate-800 border border-slate-700 p-4 space-y-3">
+                  <p className="font-medium">Disponibilitate pe perioada</p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <input
+                      type="date"
+                      value={roomPeriod.checkIn}
+                      onChange={(e) => setRoomPeriod((prev) => ({ ...prev, checkIn: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={roomPeriod.checkOut}
+                      onChange={(e) => setRoomPeriod((prev) => ({ ...prev, checkOut: e.target.value }))}
+                      className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+                    />
+                    <button
+                      onClick={() => void loadRooms()}
+                      className="px-4 py-2 rounded-lg bg-blue-700 hover:bg-blue-600 text-sm"
+                    >
+                      Recalculeaza
+                    </button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {rooms.map((room) => (
+                      <div key={`occ-${room.id}`} className="rounded-lg bg-slate-900 border border-slate-700 p-3 text-sm">
+                        <p className="font-medium">{room.name_ro}</p>
+                        <p className="text-slate-400 mt-1">Stoc total: {room.available_units}</p>
+                        <p className="text-amber-300">Ocupate: {room.occupied_units || 0}</p>
+                        <p className="text-emerald-300">Disponibile: {room.available_units_for_period ?? room.available_units}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="rounded-xl bg-slate-800 border border-slate-700 p-4 space-y-3">
                   <p className="font-medium">{roomForm.id > 0 ? "Editeaza camera" : "Adauga camera"}</p>
@@ -1095,6 +1515,8 @@ export default function AdminPage() {
                         <th className="text-left p-3">ID</th>
                         <th className="text-left p-3">Nume RO</th>
                         <th className="text-left p-3">Stoc</th>
+                        <th className="text-left p-3">Ocupate</th>
+                        <th className="text-left p-3">Disponibile</th>
                         <th className="text-left p-3">Pret</th>
                         <th className="text-left p-3">Activ</th>
                         <th className="text-left p-3">Actiuni</th>
@@ -1106,6 +1528,8 @@ export default function AdminPage() {
                           <td className="p-3">{room.id}</td>
                           <td className="p-3">{room.name_ro}</td>
                           <td className="p-3">{room.available_units}</td>
+                          <td className="p-3">{room.occupied_units || 0}</td>
+                          <td className="p-3">{room.available_units_for_period ?? room.available_units}</td>
                           <td className="p-3">{room.price_per_night}</td>
                           <td className="p-3">{room.is_active === 1 ? "Da" : "Nu"}</td>
                           <td className="p-3 space-x-2">
@@ -1188,9 +1612,15 @@ export default function AdminPage() {
               <section className="space-y-5">
                 <h2 className="text-xl font-semibold">Galerie</h2>
 
-                <div className="flex items-center gap-3">
-                  <label className="px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium cursor-pointer">
-                    Upload imagini in galerie
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => void onGalleryDrop(e)}
+                  className="rounded-2xl border border-dashed border-cyan-400/50 bg-cyan-950/20 p-6 text-center"
+                >
+                  <p className="text-sm text-slate-200 font-medium">Tragează imaginile aici sau selectează fișiere</p>
+                  <p className="text-xs text-slate-400 mt-1">Fișierele sunt optimizate automat și primesc miniaturi webp.</p>
+                  <label className="mt-4 inline-flex px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium cursor-pointer">
+                    Selectează imagini
                     <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => void uploadGallery(e.target.files)} />
                   </label>
                 </div>
@@ -1255,6 +1685,7 @@ export default function AdminPage() {
                     <option value="pending">Pending</option>
                     <option value="confirmed">Confirmed</option>
                     <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
                   </select>
                   <span className="text-sm text-slate-400 self-center">{filteredReservations.length} / {reservations.length}</span>
                 </div>
@@ -1265,8 +1696,11 @@ export default function AdminPage() {
                       <tr>
                         <th className="text-left p-3">ID</th>
                         <th className="text-left p-3">Oaspete</th>
+                        <th className="text-left p-3">Telefon</th>
+                        <th className="text-left p-3">Email</th>
                         <th className="text-left p-3">Camera</th>
                         <th className="text-left p-3">Interval</th>
+                        <th className="text-left p-3">Data rezervarii</th>
                         <th className="text-left p-3">Status</th>
                         <th className="text-left p-3">Actiuni</th>
                       </tr>
@@ -1279,6 +1713,8 @@ export default function AdminPage() {
                             <div className="text-sm font-medium">{row.first_name} {row.last_name}</div>
                             <div className="text-xs text-slate-400">{row.guest_count} oaspeti</div>
                           </td>
+                          <td className="p-3 text-xs">{row.phone || "-"}</td>
+                          <td className="p-3 text-xs">{row.email || "-"}</td>
                           <td className="p-3">
                             <div className="text-sm">{row.room_name || row.room}</div>
                             {row.room_price_per_night && (
@@ -1288,6 +1724,7 @@ export default function AdminPage() {
                           <td className="p-3 text-xs">
                             {row.check_in} → {row.check_out}
                           </td>
+                          <td className="p-3 text-xs text-slate-300">{formatDate(row.created_at)}</td>
                           <td className="p-3">
                             <select
                               value={row.status}
@@ -1302,6 +1739,13 @@ export default function AdminPage() {
                           </td>
                           <td className="p-3 text-xs space-x-1">
                             <button
+                              onClick={() => openReservationEdit(row)}
+                              className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+                              title="Editeaza rezervarea"
+                            >
+                              Editeaza
+                            </button>
+                            <button
                               onClick={() => void resendConfirmationEmail(row.id)}
                               disabled={busy}
                               className="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-60"
@@ -1313,7 +1757,7 @@ export default function AdminPage() {
                         </tr>
                       ))}
                       {filteredReservations.length === 0 && (
-                        <tr><td colSpan={6} className="p-4 text-center text-slate-400 text-sm">Nicio rezervare gasita.</td></tr>
+                        <tr><td colSpan={9} className="p-4 text-center text-slate-400 text-sm">Nicio rezervare gasita.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1361,6 +1805,8 @@ export default function AdminPage() {
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => void moderateReview(review.id, "approve")} className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-sm">Aproba</button>
                         <button onClick={() => void moderateReview(review.id, "reject")} className="px-3 py-1.5 rounded bg-amber-700 hover:bg-amber-600 text-sm">Respinge</button>
+                        <button onClick={() => editReview(review)} className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm">Editeaza</button>
+                        <button onClick={() => deleteReview(review.id)} className="px-3 py-1.5 rounded bg-rose-700 hover:bg-rose-600 text-sm">Sterge</button>
                       </div>
                     </article>
                   ))}
@@ -1562,6 +2008,83 @@ export default function AdminPage() {
                 className="px-4 py-2 rounded-lg bg-rose-700 hover:bg-rose-600 text-sm font-medium disabled:opacity-60"
               >
                 {busy ? "Se sterge..." : "Sterge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewForm.open && (
+        <div className="fixed inset-0 z-[205] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h3 className="text-lg font-semibold">Editeaza review</h3>
+              <button onClick={() => setReviewForm({ id: 0, userName: "", rating: 5, comment: "", status: "pending", open: false })} className="text-slate-400 hover:text-white">X</button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input value={reviewForm.userName} onChange={(e) => setReviewForm((p) => ({ ...p, userName: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Nume" />
+              <input type="number" min={1} max={5} value={reviewForm.rating} onChange={(e) => setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Rating" />
+              <select value={reviewForm.status} onChange={(e) => setReviewForm((p) => ({ ...p, status: e.target.value as ReviewRecord["status"] }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                <option value="pending">pending</option>
+                <option value="approved">approved</option>
+                <option value="rejected">rejected</option>
+              </select>
+              <textarea value={reviewForm.comment} onChange={(e) => setReviewForm((p) => ({ ...p, comment: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm min-h-[120px] md:col-span-2" placeholder="Comentariu" />
+            </div>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button onClick={() => setReviewForm({ id: 0, userName: "", rating: 5, comment: "", status: "pending", open: false })} className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Renunta</button>
+              <button onClick={() => void submitReviewEdit()} disabled={busy} className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium disabled:opacity-60">Salveaza review</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reservationForm.open && (
+        <div className="fixed inset-0 z-[206] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl p-6">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h3 className="text-lg font-semibold">Editeaza rezervare</h3>
+              <button
+                onClick={() => setReservationForm({ id: "", firstName: "", lastName: "", email: "", phone: "", roomSlug: "", checkIn: "", checkOut: "", adults: 1, children: 0, message: "", status: "pending", open: false })}
+                className="text-slate-400 hover:text-white"
+              >
+                X
+              </button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <input value={reservationForm.firstName} onChange={(e) => setReservationForm((p) => ({ ...p, firstName: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Prenume" />
+              <input value={reservationForm.lastName} onChange={(e) => setReservationForm((p) => ({ ...p, lastName: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Nume" />
+              <input value={reservationForm.email} onChange={(e) => setReservationForm((p) => ({ ...p, email: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Email" />
+              <input value={reservationForm.phone} onChange={(e) => setReservationForm((p) => ({ ...p, phone: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Telefon" />
+              <select value={reservationForm.roomSlug} onChange={(e) => setReservationForm((p) => ({ ...p, roomSlug: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                <option value="">Selecteaza camera</option>
+                {rooms.filter((room) => room.is_active === 1).map((room) => (
+                  <option key={`room-option-${room.id}`} value={room.slug}>{room.name_ro} ({room.price_per_night} lei)</option>
+                ))}
+              </select>
+              <select value={reservationForm.status} onChange={(e) => setReservationForm((p) => ({ ...p, status: e.target.value as ReservationRecord["status"] }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                <option value="pending">pending</option>
+                <option value="confirmed">confirmed</option>
+                <option value="cancelled">cancelled</option>
+                <option value="completed">completed</option>
+              </select>
+              <input type="date" value={reservationForm.checkIn} onChange={(e) => setReservationForm((p) => ({ ...p, checkIn: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+              <input type="date" value={reservationForm.checkOut} onChange={(e) => setReservationForm((p) => ({ ...p, checkOut: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+              <input type="number" min={1} value={reservationForm.adults} onChange={(e) => setReservationForm((p) => ({ ...p, adults: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Adulti" />
+              <input type="number" min={0} value={reservationForm.children} onChange={(e) => setReservationForm((p) => ({ ...p, children: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Copii" />
+              <textarea value={reservationForm.message} onChange={(e) => setReservationForm((p) => ({ ...p, message: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm min-h-[100px] md:col-span-2" placeholder="Mesaj client (optional)" />
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setReservationForm({ id: "", firstName: "", lastName: "", email: "", phone: "", roomSlug: "", checkIn: "", checkOut: "", adults: 1, children: 0, message: "", status: "pending", open: false })}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm"
+              >
+                Renunta
+              </button>
+              <button onClick={() => void submitReservationEdit()} disabled={busy} className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium disabled:opacity-60">
+                Salveaza rezervarea
               </button>
             </div>
           </div>

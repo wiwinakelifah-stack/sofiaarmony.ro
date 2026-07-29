@@ -40,13 +40,41 @@ export async function GET(request: NextRequest) {
 
   try {
     await ensureDbReady();
+    const checkIn = request.nextUrl.searchParams.get("checkIn") || new Date().toISOString().slice(0, 10);
+    const checkOut = request.nextUrl.searchParams.get("checkOut") || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const rooms = await dbQuery(
       `SELECT id, slug, name_ro, name_en, description_ro, description_en, max_guests, size_sqm,
        price_per_night, available_units, main_image_url, amenities_ro, amenities_en, view_ro, view_en,
        badge_ro, badge_en, is_active, sort_order, created_at, updated_at
        FROM rooms ORDER BY sort_order ASC, id ASC`
     );
-    return NextResponse.json({ rooms });
+
+    const occupancyRows = await dbQuery<Array<{ room_slug: string; total: number }>>(
+      `SELECT room_slug, COUNT(*) AS total
+       FROM reservations
+       WHERE status IN ('pending','confirmed')
+         AND check_in < ?
+         AND check_out > ?
+       GROUP BY room_slug`,
+      [checkOut, checkIn]
+    );
+    const occupancyMap = new Map(occupancyRows.map((row) => [row.room_slug, Number(row.total || 0)]));
+
+    const roomsWithAvailability = (rooms as Array<Record<string, unknown>>).map((room) => {
+      const slug = String(room.slug || "");
+      const availableUnits = Number(room.available_units || 0);
+      const occupiedUnits = Number(occupancyMap.get(slug) || 0);
+      return {
+        ...room,
+        occupied_units: occupiedUnits,
+        available_units_for_period: Math.max(0, availableUnits - occupiedUnits),
+      };
+    });
+
+    return NextResponse.json({
+      rooms: roomsWithAvailability,
+      period: { checkIn, checkOut },
+    });
   } catch (error) {
     console.error("GET /api/admin/rooms failed:", error);
     return NextResponse.json({ error: "Nu am putut incarca camerele." }, { status: 500 });
