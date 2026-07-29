@@ -9,6 +9,24 @@ function sha256(input: string) {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+function inferDefaultUnits(nameRo: string, nameEn: string) {
+  const text = `${nameRo} ${nameEn}`.toLowerCase();
+  if (text.includes("suite")) return 2;
+  if (text.includes("deluxe")) return 5;
+  if (text.includes("classic") || text.includes("clasica")) return 3;
+  return 1;
+}
+
 export async function ensureDbReady() {
   if (!bootstrapPromise) {
     bootstrapPromise = runBootstrap();
@@ -44,6 +62,7 @@ async function runBootstrap() {
 
     CREATE TABLE IF NOT EXISTS rooms (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      slug VARCHAR(190) NOT NULL DEFAULT '',
       name_ro VARCHAR(190) NOT NULL,
       name_en VARCHAR(190) NOT NULL,
       description_ro TEXT NOT NULL,
@@ -51,6 +70,7 @@ async function runBootstrap() {
       max_guests INT NOT NULL,
       size_sqm INT NOT NULL,
       price_per_night DECIMAL(10,2) NOT NULL,
+      available_units INT NOT NULL DEFAULT 1,
       main_image_url VARCHAR(1024) NOT NULL,
       amenities_ro TEXT NOT NULL,
       amenities_en TEXT NOT NULL,
@@ -99,17 +119,24 @@ async function runBootstrap() {
       email VARCHAR(190) NOT NULL,
       phone VARCHAR(60) NOT NULL,
       room VARCHAR(190) NOT NULL,
+      room_id BIGINT UNSIGNED NULL,
+      room_slug VARCHAR(190) NOT NULL DEFAULT '',
+      room_name VARCHAR(190) NOT NULL DEFAULT '',
+      room_price_per_night DECIMAL(10,2) NULL,
       check_in DATE NOT NULL,
       check_out DATE NOT NULL,
       adults INT NOT NULL,
       children INT NOT NULL DEFAULT 0,
+      guest_count INT NOT NULL DEFAULT 1,
       message TEXT NOT NULL,
-      status ENUM('pending','confirmed','cancelled') NOT NULL DEFAULT 'pending',
+      status ENUM('pending','confirmed','cancelled','completed') NOT NULL DEFAULT 'pending',
       notification_status ENUM('pending','partial','sent') NOT NULL DEFAULT 'pending',
       has_review TINYINT(1) NOT NULL DEFAULT 0,
+      stay_status ENUM('scheduled','completed') NOT NULL DEFAULT 'scheduled',
       created_at DATETIME NOT NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_reservations_status (status),
+      INDEX idx_reservations_room_slug (room_slug),
       INDEX idx_reservations_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -146,7 +173,10 @@ async function runBootstrap() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
+  await ensureColumns();
+
   await seedDefaults();
+  await normalizeRoomDefaults();
 }
 
 async function seedDefaults() {
@@ -169,13 +199,14 @@ async function seedDefaults() {
   if (roomCount === 0) {
     await dbExecute(
       `INSERT INTO rooms
-      (name_ro, name_en, description_ro, description_en, max_guests, size_sqm, price_per_night, main_image_url, amenities_ro, amenities_en, view_ro, view_en, badge_ro, badge_en, is_active, sort_order)
+      (slug, name_ro, name_en, description_ro, description_en, max_guests, size_sqm, price_per_night, available_units, main_image_url, amenities_ro, amenities_en, view_ro, view_en, badge_ro, badge_en, is_active, sort_order)
       VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1),
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 2),
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 3)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1),
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 2),
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 3)
       `,
       [
+        "classic",
         "Camera Clasica",
         "Classic Room",
         "Eleganta simpla cu mobilier din lemn masiv, pat queen-size si baie privata.",
@@ -183,6 +214,7 @@ async function seedDefaults() {
         2,
         22,
         180,
+        3,
         "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1200&q=80",
         "Wi-Fi,Parcare,Mic dejun",
         "Wi-Fi,Parking,Breakfast",
@@ -190,6 +222,7 @@ async function seedDefaults() {
         "Garden",
         null,
         null,
+        "deluxe",
         "Camera Deluxe",
         "Deluxe Room",
         "Spatiu generos, living separat, terasa privata cu vedere spre padure.",
@@ -197,6 +230,7 @@ async function seedDefaults() {
         2,
         38,
         280,
+        5,
         "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=1200&q=80",
         "Wi-Fi,Parcare,Spa,Terasa",
         "Wi-Fi,Parking,Spa,Terrace",
@@ -204,6 +238,7 @@ async function seedDefaults() {
         "Forest",
         "Cel mai popular",
         "Most popular",
+        "suite",
         "Suite Regala",
         "Royal Suite",
         "Dormitor si living premium, jacuzzi privat si vedere panoramica.",
@@ -211,6 +246,7 @@ async function seedDefaults() {
         4,
         65,
         420,
+        2,
         "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&q=80",
         "Wi-Fi,Parcare,Spa,Semineu,Jacuzzi",
         "Wi-Fi,Parking,Spa,Fireplace,Jacuzzi",
@@ -257,4 +293,62 @@ async function seedDefaults() {
       ]
     );
   }
+}
+
+async function normalizeRoomDefaults() {
+  const rooms = await dbQuery<Array<{ id: number; name_ro: string; name_en: string; slug: string; available_units: number }>>(
+    "SELECT id, name_ro, name_en, slug, available_units FROM rooms"
+  );
+
+  for (const room of rooms) {
+    const nextSlug = room.slug || slugify(room.name_en || room.name_ro);
+    const nextUnits = room.available_units > 0 ? room.available_units : inferDefaultUnits(room.name_ro, room.name_en);
+    await dbExecute("UPDATE rooms SET slug = ?, available_units = ? WHERE id = ?", [nextSlug, nextUnits, room.id]);
+  }
+}
+
+async function ensureColumns() {
+  const columnExists = async (table: string, column: string) => {
+    const rows = await dbQuery<Array<{ count: number }>>(
+      `SELECT COUNT(*) AS count
+       FROM information_schema.columns
+       WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?`,
+      [table, column]
+    );
+    return Number(rows[0]?.count || 0) > 0;
+  };
+
+  if (!(await columnExists("rooms", "slug"))) {
+    await dbRaw("ALTER TABLE rooms ADD COLUMN slug VARCHAR(190) NOT NULL DEFAULT ''");
+  }
+
+  if (!(await columnExists("rooms", "available_units"))) {
+    await dbRaw("ALTER TABLE rooms ADD COLUMN available_units INT NOT NULL DEFAULT 1");
+  }
+
+  if (!(await columnExists("reservations", "room_id"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN room_id BIGINT UNSIGNED NULL");
+  }
+
+  if (!(await columnExists("reservations", "room_slug"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN room_slug VARCHAR(190) NOT NULL DEFAULT ''");
+  }
+
+  if (!(await columnExists("reservations", "room_name"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN room_name VARCHAR(190) NOT NULL DEFAULT ''");
+  }
+
+  if (!(await columnExists("reservations", "room_price_per_night"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN room_price_per_night DECIMAL(10,2) NULL");
+  }
+
+  if (!(await columnExists("reservations", "guest_count"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN guest_count INT NOT NULL DEFAULT 1");
+  }
+
+  if (!(await columnExists("reservations", "stay_status"))) {
+    await dbRaw("ALTER TABLE reservations ADD COLUMN stay_status ENUM('scheduled','completed') NOT NULL DEFAULT 'scheduled'");
+  }
+
+  await dbRaw("ALTER TABLE reservations MODIFY COLUMN status ENUM('pending','confirmed','cancelled','completed') NOT NULL DEFAULT 'pending'");
 }

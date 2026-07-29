@@ -3,7 +3,18 @@ import { dbExecute, dbQuery } from "@/lib/db";
 import { ensureDbReady } from "@/lib/db-bootstrap";
 import { requireAdminRole } from "@/lib/admin-auth";
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
 type RoomPayload = {
+  slug?: string;
   nameRo: string;
   nameEn: string;
   descriptionRo: string;
@@ -11,6 +22,7 @@ type RoomPayload = {
   maxGuests: number;
   sizeSqm: number;
   pricePerNight: number;
+  availableUnits: number;
   mainImageUrl: string;
   amenitiesRo: string;
   amenitiesEn: string;
@@ -29,8 +41,8 @@ export async function GET(request: NextRequest) {
   try {
     await ensureDbReady();
     const rooms = await dbQuery(
-      `SELECT id, name_ro, name_en, description_ro, description_en, max_guests, size_sqm,
-       price_per_night, main_image_url, amenities_ro, amenities_en, view_ro, view_en,
+      `SELECT id, slug, name_ro, name_en, description_ro, description_en, max_guests, size_sqm,
+       price_per_night, available_units, main_image_url, amenities_ro, amenities_en, view_ro, view_en,
        badge_ro, badge_en, is_active, sort_order, created_at, updated_at
        FROM rooms ORDER BY sort_order ASC, id ASC`
     );
@@ -48,13 +60,15 @@ export async function POST(request: NextRequest) {
   try {
     await ensureDbReady();
     const body = (await request.json()) as RoomPayload;
+    const slug = (body.slug || slugify(body.nameEn || body.nameRo)).trim();
 
     await dbExecute(
       `INSERT INTO rooms
-      (name_ro, name_en, description_ro, description_en, max_guests, size_sqm, price_per_night,
-       main_image_url, amenities_ro, amenities_en, view_ro, view_en, badge_ro, badge_en, is_active, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (slug, name_ro, name_en, description_ro, description_en, max_guests, size_sqm, price_per_night,
+       available_units, main_image_url, amenities_ro, amenities_en, view_ro, view_en, badge_ro, badge_en, is_active, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        slug,
         body.nameRo,
         body.nameEn,
         body.descriptionRo,
@@ -62,6 +76,7 @@ export async function POST(request: NextRequest) {
         body.maxGuests,
         body.sizeSqm,
         body.pricePerNight,
+        body.availableUnits,
         body.mainImageUrl,
         body.amenitiesRo,
         body.amenitiesEn,
@@ -88,14 +103,16 @@ export async function PUT(request: NextRequest) {
   try {
     await ensureDbReady();
     const body = (await request.json()) as RoomPayload & { id: number };
+    const slug = (body.slug || slugify(body.nameEn || body.nameRo)).trim();
 
     await dbExecute(
       `UPDATE rooms SET
-       name_ro = ?, name_en = ?, description_ro = ?, description_en = ?, max_guests = ?, size_sqm = ?,
-       price_per_night = ?, main_image_url = ?, amenities_ro = ?, amenities_en = ?, view_ro = ?, view_en = ?,
+       slug = ?, name_ro = ?, name_en = ?, description_ro = ?, description_en = ?, max_guests = ?, size_sqm = ?,
+       price_per_night = ?, available_units = ?, main_image_url = ?, amenities_ro = ?, amenities_en = ?, view_ro = ?, view_en = ?,
        badge_ro = ?, badge_en = ?, is_active = ?, sort_order = ?
        WHERE id = ?`,
       [
+        slug,
         body.nameRo,
         body.nameEn,
         body.descriptionRo,
@@ -103,6 +120,7 @@ export async function PUT(request: NextRequest) {
         body.maxGuests,
         body.sizeSqm,
         body.pricePerNight,
+        body.availableUnits,
         body.mainImageUrl,
         body.amenitiesRo,
         body.amenitiesEn,

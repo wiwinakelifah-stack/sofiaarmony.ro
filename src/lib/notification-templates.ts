@@ -3,8 +3,29 @@ import type { Reservation } from "@/lib/reservations";
 export const CLIENT_CONFIRMATION_SUBJECT =
   "Cererea dumneavoastra de rezervare a fost inregistrata";
 
+function formatPrice(value?: number | null) {
+  if (value == null || Number.isNaN(Number(value))) return "-";
+  return `${Number(value).toFixed(2)} lei`;
+}
+
+function getRoomLabel(reservation: Reservation) {
+  return reservation.roomName || reservation.room || "Nespecificata";
+}
+
+function contactBlock() {
+  return `
+    <div style="margin-top:20px;padding:14px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+      <div style="font-weight:700;color:#334155;margin-bottom:6px;">Date de contact</div>
+      <div style="color:#475569;">Sofia Armony</div>
+      <div style="color:#475569;">Str. Florilor nr. 12, Sinaia, Prahova</div>
+      <div style="color:#475569;">Telefon: +40 722 123 456</div>
+      <div style="color:#475569;">Email: contact@sofiaarmony.ro</div>
+    </div>
+  `;
+}
+
 export function formatAdminWhatsAppMessage(reservation: Reservation) {
-  return `🏨 REZERVARE NOUA - SOFIA ARMONY\n\n👤 Nume:\n${reservation.firstName} ${reservation.lastName}\n\n📞 Telefon:\n${reservation.phone}\n\n📧 Email:\n${reservation.email}\n\n🛏 Camera:\n${reservation.room || "Nespecificata"}\n\n📅 Check-In:\n${reservation.checkIn}\n\n📅 Check-Out:\n${reservation.checkOut}\n\n👨 Adulti:\n${reservation.adults}\n\n👶 Copii:\n${reservation.children}\n\n📝 Observatii:\n${reservation.message || "-"}\n\n🆔 ID Rezervare:\n${reservation.id}\n\n🕒 Data rezervarii:\n${new Date(reservation.createdAt).toLocaleString("ro-RO")}`;
+  return `🏨 REZERVARE NOUA - SOFIA ARMONY\n\n👤 Nume:\n${reservation.firstName} ${reservation.lastName}\n\n📞 Telefon:\n${reservation.phone}\n\n📧 Email:\n${reservation.email}\n\n🛏 Camera:\n${getRoomLabel(reservation)}\n\n💶 Pret/noapte:\n${formatPrice(reservation.roomPricePerNight)}\n\n📅 Check-In:\n${reservation.checkIn}\n\n📅 Check-Out:\n${reservation.checkOut}\n\n👨 Oaspeti:\n${reservation.guestCount || reservation.adults + reservation.children}\n\n📝 Observatii:\n${reservation.message || "-"}\n\n🆔 ID Rezervare:\n${reservation.id}\n\n🕒 Data rezervarii:\n${new Date(reservation.createdAt).toLocaleString("ro-RO")}`;
 }
 
 export function formatAdminEmailHtml(reservation: Reservation) {
@@ -17,10 +38,11 @@ export function formatAdminEmailHtml(reservation: Reservation) {
           <tr><td style="padding:6px 0;font-weight:bold;">Nume</td><td style="padding:6px 0;">${reservation.firstName} ${reservation.lastName}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Telefon</td><td style="padding:6px 0;">${reservation.phone}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Email</td><td style="padding:6px 0;">${reservation.email}</td></tr>
-          <tr><td style="padding:6px 0;font-weight:bold;">Camera</td><td style="padding:6px 0;">${reservation.room || "Nespecificata"}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;">Camera</td><td style="padding:6px 0;">${getRoomLabel(reservation)}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;">Pret/noapte</td><td style="padding:6px 0;">${formatPrice(reservation.roomPricePerNight)}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Check-In</td><td style="padding:6px 0;">${reservation.checkIn}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Check-Out</td><td style="padding:6px 0;">${reservation.checkOut}</td></tr>
-          <tr><td style="padding:6px 0;font-weight:bold;">Adulti</td><td style="padding:6px 0;">${reservation.adults}</td></tr>
+          <tr><td style="padding:6px 0;font-weight:bold;">Oaspeti</td><td style="padding:6px 0;">${reservation.guestCount || reservation.adults + reservation.children}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Copii</td><td style="padding:6px 0;">${reservation.children}</td></tr>
           <tr><td style="padding:6px 0;font-weight:bold;">Observatii</td><td style="padding:6px 0;">${reservation.message || "-"}</td></tr>
         </tbody>
@@ -32,10 +54,11 @@ export function formatAdminEmailHtml(reservation: Reservation) {
 export function formatClientEmailHtml(reservation: Reservation) {
   const detailsRows = [
     ["Nume", `${reservation.firstName} ${reservation.lastName}`],
-    ["Camera", reservation.room || "Nespecificata"],
+    ["Camera", getRoomLabel(reservation)],
+    ["Pret/noapte", formatPrice(reservation.roomPricePerNight)],
     ["Check-In", reservation.checkIn],
     ["Check-Out", reservation.checkOut],
-    ["Adulti", String(reservation.adults)],
+    ["Oaspeti", String(reservation.guestCount || reservation.adults + reservation.children)],
     ["Copii", String(reservation.children)],
     ["Telefon", reservation.phone],
     ["Email", reservation.email],
@@ -77,6 +100,7 @@ export function formatClientEmailHtml(reservation: Reservation) {
                   <p style="margin:0 0 12px;font-size:16px;">Buna ${reservation.firstName},</p>
                   <p style="margin:0 0 12px;font-size:15px;line-height:1.7;">Va multumim ca ati ales Sofia Armony.</p>
                   <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">Cererea dumneavoastra de rezervare a fost inregistrata cu succes.</p>
+                  <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">Rezervarea este inregistrata; administratorul va confirma telefonic disponibilitatea daca este nevoie de validare suplimentara.</p>
 
                   <div style="font-size:18px;font-weight:700;color:#8b6f47;margin-bottom:10px;">Detaliile rezervarii</div>
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
@@ -88,6 +112,7 @@ export function formatClientEmailHtml(reservation: Reservation) {
                   </div>
 
                   <p style="margin:0 0 20px;font-size:15px;line-height:1.7;">Un membru al echipei Sofia Armony va va contacta telefonic pentru confirmarea disponibilitatii.</p>
+                  ${contactBlock()}
 
                   <div style="text-align:center;margin:24px 0 8px;">
                     <a href="https://sofiaarmony.ro" style="display:inline-block;background:#8b6f47;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:600;font-size:14px;">Viziteaza website-ul</a>

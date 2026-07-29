@@ -62,7 +62,32 @@ export default function Contact({ locale = "ro" }: { locale?: "ro" | "en" }) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to submit booking");
+        let errorMessage = `Failed to submit booking (${response.status})`;
+        try {
+          const responseText = await response.text();
+          if (responseText.trim()) {
+            try {
+              const errorData = JSON.parse(responseText) as {
+                error?: string;
+                details?: string[];
+              };
+
+              if (Array.isArray(errorData?.details) && errorData.details.length > 0) {
+                errorMessage = errorData.details.join(" ");
+              } else if (typeof errorData?.error === "string" && errorData.error.trim()) {
+                errorMessage = errorData.error;
+              } else {
+                errorMessage = responseText;
+              }
+            } catch {
+              errorMessage = responseText;
+            }
+          }
+        } catch {
+          // Keep the status-based fallback when the body cannot be read.
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -287,11 +312,12 @@ export default function Contact({ locale = "ro" }: { locale?: "ro" | "en" }) {
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-[family-name:var(--font-lato)] text-stone-500 mb-1.5 ml-1">
-                      {t.phone}
+                      {t.phone} *
                     </label>
                     <input
                       type="tel"
                       name="phone"
+                      required
                       placeholder="+40 7xx xxx xxx"
                       value={form.phone}
                       onChange={handleChange}

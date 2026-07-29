@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     await ensureDbReady();
     const reservations = await dbQuery(
-      `SELECT id, first_name, last_name, email, phone, room, check_in, check_out, adults, children,
+      `SELECT id, first_name, last_name, email, phone, room, room_name, room_price_per_night, guest_count, check_in, check_out, adults, children,
        message, status, notification_status, has_review, created_at
        FROM reservations ORDER BY created_at DESC LIMIT 200`
     );
@@ -29,7 +29,7 @@ export async function PUT(request: NextRequest) {
     await ensureDbReady();
     const body = (await request.json()) as {
       id: string;
-      status?: "pending" | "confirmed" | "cancelled";
+      status?: "pending" | "confirmed" | "cancelled" | "completed";
       notificationStatus?: "pending" | "partial" | "sent";
     };
 

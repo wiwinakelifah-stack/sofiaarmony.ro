@@ -8,6 +8,10 @@ export interface ReservationInput {
   email: string;
   phone: string;
   room: string;
+  roomId?: number | null;
+  roomSlug?: string;
+  roomName?: string;
+  roomPricePerNight?: number | null;
   checkIn: string;
   checkOut: string;
   adults: number;
@@ -18,7 +22,8 @@ export interface ReservationInput {
 export interface Reservation extends ReservationInput {
   id: string;
   createdAt: string;
-  status: "pending" | "confirmed" | "cancelled";
+  guestCount: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   notificationStatus: "pending" | "partial" | "sent";
   hasReview?: boolean;
 }
@@ -56,13 +61,16 @@ export function buildReservationId() {
 
 export async function createReservation(input: ReservationInput): Promise<Reservation> {
   const reservations = await readReservations();
+  const guestCount = Math.max(1, Number(input.adults || 0) + Number(input.children || 0));
 
   const reservation: Reservation = {
     id: buildReservationId(),
     createdAt: new Date().toISOString(),
     status: "pending",
     notificationStatus: "pending",
+    guestCount,
     ...input,
+    room: input.roomName || input.room,
   };
 
   reservations.push(reservation);
@@ -74,10 +82,15 @@ export async function createReservation(input: ReservationInput): Promise<Reserv
     email: reservation.email,
     phone: reservation.phone,
     room: reservation.room,
+    roomId: reservation.roomId,
+    roomSlug: reservation.roomSlug,
+    roomName: reservation.roomName || reservation.room,
+    roomPricePerNight: reservation.roomPricePerNight ?? null,
     checkIn: reservation.checkIn,
     checkOut: reservation.checkOut,
     adults: reservation.adults,
     children: reservation.children,
+    guestCount: reservation.guestCount,
     message: reservation.message,
     status: reservation.status,
     notificationStatus: reservation.notificationStatus,
@@ -113,10 +126,15 @@ export async function updateReservationNotificationStatus(
       email: updatedReservation.email,
       phone: updatedReservation.phone,
       room: updatedReservation.room,
+      roomId: updatedReservation.roomId,
+      roomSlug: updatedReservation.roomSlug,
+      roomName: updatedReservation.roomName || updatedReservation.room,
+      roomPricePerNight: updatedReservation.roomPricePerNight ?? null,
       checkIn: updatedReservation.checkIn,
       checkOut: updatedReservation.checkOut,
       adults: updatedReservation.adults,
       children: updatedReservation.children,
+      guestCount: updatedReservation.guestCount,
       message: updatedReservation.message,
       status: updatedReservation.status,
       notificationStatus: updatedReservation.notificationStatus,

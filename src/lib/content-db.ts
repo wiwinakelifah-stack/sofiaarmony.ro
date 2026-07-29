@@ -1,15 +1,20 @@
 import { ensureDbReady } from "@/lib/db-bootstrap";
 import { dbExecute, dbQuery, dbRaw } from "@/lib/db";
+import { getRoomAvailability } from "@/lib/room-availability";
 
 export type Locale = "ro" | "en";
 
 export type PublicRoom = {
   id: number;
+  slug: string;
   name: string;
   description: string;
   maxGuests: number;
   sizeSqm: number;
   pricePerNight: number;
+  availableUnits: number;
+  occupiedUnits: number;
+  availableUnitsForPeriod: number;
   mainImageUrl: string;
   amenities: string[];
   view: string;
@@ -42,30 +47,7 @@ export type PublicGalleryImage = {
 };
 
 export async function getPublicRooms(locale: Locale): Promise<PublicRoom[]> {
-  await ensureDbReady();
-
-  const rows = await dbQuery<
-    Array<{
-      id: number;
-      name_ro: string;
-      name_en: string;
-      description_ro: string;
-      description_en: string;
-      max_guests: number;
-      size_sqm: number;
-      price_per_night: number;
-      main_image_url: string;
-      amenities_ro: string;
-      amenities_en: string;
-      view_ro: string;
-      view_en: string;
-      badge_ro: string | null;
-      badge_en: string | null;
-      sort_order: number;
-    }>
-  >(
-    `SELECT * FROM rooms WHERE is_active = 1 ORDER BY sort_order ASC, id ASC`
-  );
+  const rows = await getRoomAvailability(locale);
 
   const roomIds = rows.map((row) => row.id);
   const images = roomIds.length
@@ -102,19 +84,23 @@ export async function getPublicRooms(locale: Locale): Promise<PublicRoom[]> {
 
   return rows.map((row) => ({
     id: row.id,
-    name: locale === "en" ? row.name_en : row.name_ro,
-    description: locale === "en" ? row.description_en : row.description_ro,
-    maxGuests: row.max_guests,
-    sizeSqm: row.size_sqm,
-    pricePerNight: Number(row.price_per_night),
-    mainImageUrl: row.main_image_url,
-    amenities: (locale === "en" ? row.amenities_en : row.amenities_ro)
+    slug: row.slug,
+    name: locale === "en" ? row.nameEn : row.nameRo,
+    description: locale === "en" ? row.descriptionEn : row.descriptionRo,
+    maxGuests: row.maxGuests,
+    sizeSqm: row.sizeSqm,
+    pricePerNight: Number(row.pricePerNight),
+    availableUnits: row.availableUnits,
+    occupiedUnits: row.occupiedUnits,
+    availableUnitsForPeriod: row.availableUnitsForPeriod,
+    mainImageUrl: row.mainImageUrl,
+    amenities: (locale === "en" ? row.amenitiesEn : row.amenitiesRo)
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    view: locale === "en" ? row.view_en : row.view_ro,
-    badge: locale === "en" ? row.badge_en : row.badge_ro,
-    sortOrder: row.sort_order,
+    view: locale === "en" ? row.viewEn : row.viewRo,
+    badge: locale === "en" ? row.badgeEn : row.badgeRo,
+    sortOrder: row.sortOrder,
     images: imageMap.get(row.id) || [],
   }));
 }
@@ -217,32 +203,51 @@ export async function mirrorReservationToDb(input: {
   email: string;
   phone: string;
   room: string;
+  roomId?: number | null;
+  roomSlug?: string;
+  roomName?: string;
+  roomPricePerNight?: number | null;
   checkIn: string;
   checkOut: string;
   adults: number;
   children: number;
   message: string;
-  status: "pending" | "confirmed" | "cancelled";
+  guestCount?: number;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   notificationStatus: "pending" | "partial" | "sent";
   createdAt: string;
   hasReview?: boolean;
 }) {
   await ensureDbReady();
 
+  const createdAtForDb = (() => {
+    const parsed = new Date(input.createdAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return input.createdAt;
+    }
+
+    return parsed.toISOString().slice(0, 19).replace("T", " ");
+  })();
+
   await dbExecute(
     `INSERT INTO reservations
-      (id, first_name, last_name, email, phone, room, check_in, check_out, adults, children, message, status, notification_status, has_review, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, first_name, last_name, email, phone, room, room_id, room_slug, room_name, room_price_per_night, check_in, check_out, adults, children, guest_count, message, status, notification_status, has_review, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
       first_name = VALUES(first_name),
       last_name = VALUES(last_name),
       email = VALUES(email),
       phone = VALUES(phone),
       room = VALUES(room),
+      room_id = VALUES(room_id),
+      room_slug = VALUES(room_slug),
+      room_name = VALUES(room_name),
+      room_price_per_night = VALUES(room_price_per_night),
       check_in = VALUES(check_in),
       check_out = VALUES(check_out),
       adults = VALUES(adults),
       children = VALUES(children),
+      guest_count = VALUES(guest_count),
       message = VALUES(message),
       status = VALUES(status),
       notification_status = VALUES(notification_status),
@@ -255,15 +260,20 @@ export async function mirrorReservationToDb(input: {
       input.email,
       input.phone,
       input.room,
+      input.roomId ?? null,
+      input.roomSlug || "",
+      input.roomName || input.room,
+      input.roomPricePerNight ?? null,
       input.checkIn,
       input.checkOut,
       input.adults,
       input.children,
+      input.guestCount ?? Math.max(1, input.adults + input.children),
       input.message,
       input.status,
       input.notificationStatus,
       input.hasReview ? 1 : 0,
-      input.createdAt,
+      createdAtForDb,
     ]
   );
 }

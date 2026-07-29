@@ -16,6 +16,7 @@ import {
   updateReservationNotificationStatus,
   type ReservationInput,
 } from "@/lib/reservations";
+import { resolveRequestedRoom } from "@/lib/room-availability";
 
 interface IncomingBookingPayload {
   firstName?: string;
@@ -24,6 +25,8 @@ interface IncomingBookingPayload {
   email?: string;
   phone?: string;
   room?: string;
+  roomSlug?: string;
+  roomId?: number | string;
   checkIn?: string;
   checkOut?: string;
   adults?: number | string;
@@ -112,12 +115,33 @@ export async function POST(request: NextRequest) {
       email: (payload.email || "").trim(),
       phone: (payload.phone || "").trim(),
       room: (payload.room || "").trim(),
+      roomId: payload.roomId ? Number(payload.roomId) : null,
+      roomSlug: (payload.roomSlug || payload.room || "").trim(),
       checkIn: (payload.checkIn || "").trim(),
       checkOut: (payload.checkOut || "").trim(),
       adults: toNumber(payload.adults ?? payload.guests, 1),
       children: toNumber(payload.children, 0),
       message: (payload.message || "").trim(),
     };
+
+    const roomAvailability = await resolveRequestedRoom({
+      roomSlug: reservationInput.roomSlug,
+      checkIn: reservationInput.checkIn,
+      checkOut: reservationInput.checkOut,
+      locale: "ro",
+    });
+
+    if (!roomAvailability.room) {
+      return NextResponse.json(
+        { error: roomAvailability.message },
+        { status: 409 }
+      );
+    }
+
+    reservationInput.roomId = roomAvailability.room.id;
+    reservationInput.roomSlug = roomAvailability.room.slug;
+    reservationInput.roomName = roomAvailability.room.nameRo;
+    reservationInput.roomPricePerNight = roomAvailability.room.pricePerNight;
 
     const validationErrors = validateReservationInput(reservationInput);
     if (validationErrors.length) {

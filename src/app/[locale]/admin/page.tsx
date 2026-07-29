@@ -65,6 +65,7 @@ type ProfilePayload = {
 
 type RoomRecord = {
   id: number;
+  slug: string;
   name_ro: string;
   name_en: string;
   description_ro: string;
@@ -80,6 +81,7 @@ type RoomRecord = {
   badge_ro: string | null;
   badge_en: string | null;
   is_active: number;
+  available_units: number;
   sort_order: number;
 };
 
@@ -109,8 +111,14 @@ type ReservationRecord = {
   id: string;
   first_name: string;
   last_name: string;
+  email: string;
   room: string;
-  status: "pending" | "confirmed" | "cancelled";
+  room_name: string;
+  room_price_per_night: number | null;
+  guest_count: number;
+  check_in: string;
+  check_out: string;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   created_at: string;
 };
 
@@ -218,6 +226,7 @@ export default function AdminPage() {
     badgeRo: "",
     badgeEn: "",
     isActive: true,
+    availableUnits: 1,
     sortOrder: 99,
   });
 
@@ -238,6 +247,13 @@ export default function AdminPage() {
     sortOrder: 0,
     isActive: true,
   });
+
+  const [deleteTarget, setDeleteTarget] = useState<
+    | { kind: "room"; id: number; label: string }
+    | { kind: "gallery"; id: number; label: string }
+    | { kind: "room-image"; id: number; label: string }
+    | null
+  >(null);
 
   const isSuperAdmin = user?.role === "super_admin";
 
@@ -422,6 +438,7 @@ export default function AdminPage() {
       badgeRo: room.badge_ro || "",
       badgeEn: room.badge_en || "",
       isActive: Number(room.is_active) === 1,
+      availableUnits: Number(room.available_units || 1),
       sortOrder: Number(room.sort_order),
     });
   };
@@ -448,6 +465,7 @@ export default function AdminPage() {
         badgeRo: roomForm.badgeRo || null,
         badgeEn: roomForm.badgeEn || null,
         isActive: roomForm.isActive,
+        availableUnits: Number(roomForm.availableUnits),
         sortOrder: Number(roomForm.sortOrder),
       };
 
@@ -484,6 +502,7 @@ export default function AdminPage() {
         badgeRo: "",
         badgeEn: "",
         isActive: true,
+        availableUnits: 1,
         sortOrder: 99,
       });
       await loadRooms();
@@ -495,14 +514,47 @@ export default function AdminPage() {
   };
 
   const deleteRoom = async (id: number) => {
-    if (!confirm("Sigur stergi camera?")) return;
+    const room = rooms.find((item) => item.id === id);
+    setDeleteTarget({ kind: "room", id, label: room ? room.name_ro : `camera #${id}` });
+  };
+
+  const deleteGallery = async (id: number) => {
+    const item = gallery.find((entry) => entry.id === id);
+    setDeleteTarget({ kind: "gallery", id, label: item ? item.title_ro || `imagine #${id}` : `imagine #${id}` });
+  };
+
+  const deleteRoomImage = async (id: number) => {
+    const item = roomImages.find((entry) => entry.id === id);
+    setDeleteTarget({ kind: "room-image", id, label: item ? item.title || `imagine #${id}` : `imagine #${id}` });
+  };
+
+  const confirmDeleteTarget = async () => {
+    if (!deleteTarget) return;
+
     clearNotice();
     setBusy(true);
 
     try {
-      await fetchJson(`/api/admin/rooms?id=${id}`, { method: "DELETE" });
-      setMessage("Camera stearsa.");
-      await loadRooms();
+      if (deleteTarget.kind === "room") {
+        await fetchJson(`/api/admin/rooms?id=${deleteTarget.id}`, { method: "DELETE" });
+        setMessage("Camera stearsa.");
+        await loadRooms();
+      }
+
+      if (deleteTarget.kind === "gallery") {
+        await fetchJson(`/api/admin/gallery?id=${deleteTarget.id}`, { method: "DELETE" });
+        setMessage("Imagine stearsa din galerie.");
+        await loadGallery();
+      }
+
+      if (deleteTarget.kind === "room-image") {
+        await fetchJson(`/api/admin/rooms/images?id=${deleteTarget.id}`, { method: "DELETE" });
+        if (selectedRoomId) {
+          await loadRoomImages(selectedRoomId);
+        }
+        setMessage("Imagine stearsa.");
+      }
+      setDeleteTarget(null);
     } catch (err) {
       handleError(err);
     } finally {
@@ -598,22 +650,6 @@ export default function AdminPage() {
     }
   };
 
-  const deleteGallery = async (id: number) => {
-    if (!confirm("Sigur stergi imaginea?")) return;
-
-    clearNotice();
-    setBusy(true);
-
-    try {
-      await fetchJson(`/api/admin/gallery?id=${id}`, { method: "DELETE" });
-      setMessage("Imagine stearsa din galerie.");
-      await loadGallery();
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const uploadRoomImages = async (files: FileList | null) => {
     if (!files || files.length === 0 || !selectedRoomId) return;
@@ -701,26 +737,8 @@ export default function AdminPage() {
     }
   };
 
-  const deleteRoomImage = async (id: number) => {
-    if (!confirm("Sigur stergi aceasta imagine a camerei?")) return;
 
-    clearNotice();
-    setBusy(true);
-
-    try {
-      await fetchJson(`/api/admin/rooms/images?id=${id}`, { method: "DELETE" });
-      if (selectedRoomId) {
-        await loadRoomImages(selectedRoomId);
-      }
-      setMessage("Imagine stearsa.");
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const changeReservationStatus = async (id: string, status: "pending" | "confirmed" | "cancelled") => {
+  const changeReservationStatus = async (id: string, status: "pending" | "confirmed" | "cancelled" | "completed") => {
     clearNotice();
 
     try {
@@ -734,6 +752,27 @@ export default function AdminPage() {
       setMessage("Status rezervare actualizat.");
     } catch (err) {
       handleError(err);
+    }
+  };
+
+  const resendConfirmationEmail = async (reservationId: string) => {
+    clearNotice();
+    setBusy(true);
+
+    try {
+      const result = await fetchJson<{ success: boolean; message: string }>(
+        "/api/admin/reservations/resend-confirmation",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reservationId }),
+        }
+      );
+      setMessage(result.message || "Email retrimis.");
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -1028,6 +1067,7 @@ export default function AdminPage() {
                     <input type="number" value={roomForm.maxGuests} onChange={(e) => setRoomForm((p) => ({ ...p, maxGuests: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Max guests" />
                     <input type="number" value={roomForm.sizeSqm} onChange={(e) => setRoomForm((p) => ({ ...p, sizeSqm: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Size sqm" />
                     <input type="number" value={roomForm.pricePerNight} onChange={(e) => setRoomForm((p) => ({ ...p, pricePerNight: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Pret" />
+                    <input type="number" min={1} value={roomForm.availableUnits} onChange={(e) => setRoomForm((p) => ({ ...p, availableUnits: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Camere disponibile" />
                     <input type="number" value={roomForm.sortOrder} onChange={(e) => setRoomForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Sort order" />
                     <textarea value={roomForm.descriptionRo} onChange={(e) => setRoomForm((p) => ({ ...p, descriptionRo: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm md:col-span-2 min-h-[84px]" placeholder="Descriere RO" />
                     <textarea value={roomForm.descriptionEn} onChange={(e) => setRoomForm((p) => ({ ...p, descriptionEn: e.target.value }))} className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm md:col-span-2 min-h-[84px]" placeholder="Description EN" />
@@ -1039,7 +1079,7 @@ export default function AdminPage() {
                     <button onClick={() => void submitRoom()} disabled={busy} className="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-sm font-medium disabled:opacity-60">{roomForm.id > 0 ? "Actualizeaza" : "Adauga"}</button>
                     {roomForm.id > 0 && (
                       <button
-                        onClick={() => setRoomForm({ id: 0, nameRo: "", nameEn: "", descriptionRo: "", descriptionEn: "", maxGuests: 2, sizeSqm: 20, pricePerNight: 200, mainImageUrl: "", amenitiesRo: "Wi-Fi", amenitiesEn: "Wi-Fi", viewRo: "Gradina", viewEn: "Garden", badgeRo: "", badgeEn: "", isActive: true, sortOrder: 99 })}
+                        onClick={() => setRoomForm({ id: 0, nameRo: "", nameEn: "", descriptionRo: "", descriptionEn: "", maxGuests: 2, sizeSqm: 20, pricePerNight: 200, mainImageUrl: "", amenitiesRo: "Wi-Fi", amenitiesEn: "Wi-Fi", viewRo: "Gradina", viewEn: "Garden", badgeRo: "", badgeEn: "", isActive: true, availableUnits: 1, sortOrder: 99 })}
                         className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm"
                       >
                         Reset
@@ -1054,6 +1094,7 @@ export default function AdminPage() {
                       <tr>
                         <th className="text-left p-3">ID</th>
                         <th className="text-left p-3">Nume RO</th>
+                        <th className="text-left p-3">Stoc</th>
                         <th className="text-left p-3">Pret</th>
                         <th className="text-left p-3">Activ</th>
                         <th className="text-left p-3">Actiuni</th>
@@ -1064,6 +1105,7 @@ export default function AdminPage() {
                         <tr key={room.id} className="border-t border-slate-700">
                           <td className="p-3">{room.id}</td>
                           <td className="p-3">{room.name_ro}</td>
+                          <td className="p-3">{room.available_units}</td>
                           <td className="p-3">{room.price_per_night}</td>
                           <td className="p-3">{room.is_active === 1 ? "Da" : "Nu"}</td>
                           <td className="p-3 space-x-2">
@@ -1222,34 +1264,56 @@ export default function AdminPage() {
                     <thead className="bg-slate-800">
                       <tr>
                         <th className="text-left p-3">ID</th>
-                        <th className="text-left p-3">Nume</th>
+                        <th className="text-left p-3">Oaspete</th>
                         <th className="text-left p-3">Camera</th>
+                        <th className="text-left p-3">Interval</th>
                         <th className="text-left p-3">Status</th>
-                        <th className="text-left p-3">Creat</th>
+                        <th className="text-left p-3">Actiuni</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredReservations.map((row) => (
                         <tr key={row.id} className="border-t border-slate-700">
                           <td className="p-3 font-mono text-xs text-slate-400">{row.id}</td>
-                          <td className="p-3">{row.first_name} {row.last_name}</td>
-                          <td className="p-3">{row.room}</td>
+                          <td className="p-3">
+                            <div className="text-sm font-medium">{row.first_name} {row.last_name}</div>
+                            <div className="text-xs text-slate-400">{row.guest_count} oaspeti</div>
+                          </td>
+                          <td className="p-3">
+                            <div className="text-sm">{row.room_name || row.room}</div>
+                            {row.room_price_per_night && (
+                              <div className="text-xs text-slate-400">{row.room_price_per_night} lei/noapte</div>
+                            )}
+                          </td>
+                          <td className="p-3 text-xs">
+                            {row.check_in} → {row.check_out}
+                          </td>
                           <td className="p-3">
                             <select
                               value={row.status}
                               onChange={(e) => void changeReservationStatus(row.id, e.target.value as ReservationRecord["status"])}
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1"
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs"
                             >
                               <option value="pending">pending</option>
                               <option value="confirmed">confirmed</option>
                               <option value="cancelled">cancelled</option>
+                              <option value="completed">completed</option>
                             </select>
                           </td>
-                          <td className="p-3 text-slate-300">{formatDate(row.created_at)}</td>
+                          <td className="p-3 text-xs space-x-1">
+                            <button
+                              onClick={() => void resendConfirmationEmail(row.id)}
+                              disabled={busy}
+                              className="px-2 py-1 rounded bg-blue-700 hover:bg-blue-600 disabled:opacity-60"
+                              title="Retrimitere email confirmare"
+                            >
+                              Email
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {filteredReservations.length === 0 && (
-                        <tr><td colSpan={5} className="p-4 text-center text-slate-400 text-sm">Nicio rezervare gasita.</td></tr>
+                        <tr><td colSpan={6} className="p-4 text-center text-slate-400 text-sm">Nicio rezervare gasita.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -1475,6 +1539,32 @@ export default function AdminPage() {
             className="max-h-[90vh] max-w-full rounded-xl object-contain shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[210] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl p-6">
+            <h3 className="text-lg font-semibold mb-2">Confirmare stergere</h3>
+            <p className="text-sm text-slate-300 mb-5">
+              Sigur vrei sa stergi {deleteTarget.label}? Aceasta actiune nu poate fi anulata.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm"
+              >
+                Renunta
+              </button>
+              <button
+                onClick={() => void confirmDeleteTarget()}
+                disabled={busy}
+                className="px-4 py-2 rounded-lg bg-rose-700 hover:bg-rose-600 text-sm font-medium disabled:opacity-60"
+              >
+                {busy ? "Se sterge..." : "Sterge"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
